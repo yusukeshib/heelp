@@ -41,24 +41,21 @@ struct ReviewResult: Codable, Equatable {
 }
 
 enum ReviewError: LocalizedError {
-    case invalidURL
-    case invalidResponse
-    case api(status: Int, message: String)
-    case emptyResponse
-    case malformedOutput(String)
+    case invalidResponse(provider: String)
+    case api(provider: String, status: Int, message: String)
+    case emptyResponse(provider: String)
+    case malformedOutput(provider: String, output: String)
 
     var errorDescription: String? {
         switch self {
-        case .invalidURL:
-            return "The Anthropic API URL is invalid."
-        case .invalidResponse:
-            return "Anthropic returned an invalid response."
-        case .api(let status, let message):
-            return "Anthropic error \(status): \(message)"
-        case .emptyResponse:
-            return "Anthropic returned no text."
-        case .malformedOutput:
-            return "Anthropic returned an unexpected response format."
+        case .invalidResponse(let provider):
+            return "\(provider) returned an invalid response."
+        case .api(let provider, let status, let message):
+            return "\(provider) error \(status): \(message)"
+        case .emptyResponse(let provider):
+            return "\(provider) returned no text."
+        case .malformedOutput(let provider, _):
+            return "\(provider) returned an unexpected response format."
         }
     }
 }

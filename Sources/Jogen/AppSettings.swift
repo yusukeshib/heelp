@@ -4,7 +4,7 @@ import Foundation
 final class AppSettings {
     static let shared = AppSettings()
 
-    static let defaultModel = "claude-haiku-4-5-20251001"
+    static let defaultModel = AIProvider.anthropic.defaultModel
     private static let retiredDefaultModel = "claude-3-5-haiku-20241022"
 
     private static let retiredDefaultPrompt = """
@@ -39,17 +39,20 @@ final class AppSettings {
     """
 
     private enum Key {
+        static let provider = "provider"
         static let model = "model"
         static let prompt = "prompt"
-        static let debounceMilliseconds = "debounceMilliseconds"
-        static let diagnosticMode = "diagnosticMode"
-        static let didMigrateToSelectionMode = "didMigrateToSelectionMode"
     }
 
     private let defaults: UserDefaults
+    private let runtimeOptions: RuntimeOptions
 
-    init(defaults: UserDefaults = .standard) {
+    init(
+        defaults: UserDefaults = .standard,
+        runtimeOptions: RuntimeOptions = .current
+    ) {
         self.defaults = defaults
+        self.runtimeOptions = runtimeOptions
         if defaults.string(forKey: Key.model) == Self.retiredDefaultModel {
             defaults.set(Self.defaultModel, forKey: Key.model)
         }
@@ -59,18 +62,38 @@ final class AppSettings {
             prompt == Self.retiredSelectionSilencePrompt {
             defaults.set(Self.defaultPrompt, forKey: Key.prompt)
         }
-        if !defaults.bool(forKey: Key.didMigrateToSelectionMode) {
-            if defaults.object(forKey: Key.debounceMilliseconds) == nil ||
-                defaults.integer(forKey: Key.debounceMilliseconds) == 700 {
-                defaults.set(300, forKey: Key.debounceMilliseconds)
-            }
-            defaults.set(true, forKey: Key.didMigrateToSelectionMode)
+    }
+
+    var provider: AIProvider {
+        get {
+            guard let value = defaults.string(forKey: Key.provider),
+                  let provider = AIProvider(rawValue: value)
+            else { return .anthropic }
+            return provider
         }
+        set { defaults.set(newValue.rawValue, forKey: Key.provider) }
     }
 
     var model: String {
-        get { defaults.string(forKey: Key.model) ?? Self.defaultModel }
-        set { defaults.set(newValue, forKey: Key.model) }
+        get { model(for: provider) }
+        set { setModel(newValue, for: provider) }
+    }
+
+    func model(for provider: AIProvider) -> String {
+        defaults.string(forKey: modelKey(for: provider)) ?? provider.defaultModel
+    }
+
+    func setModel(_ model: String, for provider: AIProvider) {
+        defaults.set(model, forKey: modelKey(for: provider))
+    }
+
+    private func modelKey(for provider: AIProvider) -> String {
+        switch provider {
+        case .anthropic:
+            return Key.model
+        case .openAI, .openRouter:
+            return "\(Key.model).\(provider.rawValue)"
+        }
     }
 
     var prompt: String {
@@ -78,17 +101,12 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: Key.prompt) }
     }
 
-    var debounceMilliseconds: Int {
-        get {
-            guard defaults.object(forKey: Key.debounceMilliseconds) != nil else { return 300 }
-            return min(max(defaults.integer(forKey: Key.debounceMilliseconds), 250), 5_000)
-        }
-        set { defaults.set(min(max(newValue, 250), 5_000), forKey: Key.debounceMilliseconds) }
+    var selectionDelayMilliseconds: Int {
+        runtimeOptions.selectionDelayMilliseconds
     }
 
     var diagnosticMode: Bool {
-        get { defaults.bool(forKey: Key.diagnosticMode) }
-        set { defaults.set(newValue, forKey: Key.diagnosticMode) }
+        runtimeOptions.diagnosticMode
     }
 
     func resetPrompt() {

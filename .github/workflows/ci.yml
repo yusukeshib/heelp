@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Build
+        run: swift build -c release
+
+      - name: Bundle (ad-hoc signed)
+        run: make bundle SIGN_IDENTITY=-
+
+      - name: Verify bundle
+        run: |
+          test -x Jogen.app/Contents/MacOS/Jogen
+          plutil -lint Jogen.app/Contents/Info.plist
+          codesign --verify --verbose Jogen.app
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jogen.app
+          path: Jogen.app

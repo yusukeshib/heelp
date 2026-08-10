@@ -3,13 +3,11 @@ import Security
 
 enum KeychainStore {
     private static let service = "com.yusukeshibata.jogen"
-    private static let account = "anthropic-api-key"
-
-    static func apiKey() -> String {
+    static func apiKey(for provider: AIProvider) -> String {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrAccount as String: provider.keychainAccount,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
@@ -22,11 +20,11 @@ enum KeychainStore {
         return value
     }
 
-    static func setAPIKey(_ value: String) throws {
+    static func setAPIKey(_ value: String, for provider: AIProvider) throws {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account
+            kSecAttrAccount as String: provider.keychainAccount
         ]
 
         if value.isEmpty {

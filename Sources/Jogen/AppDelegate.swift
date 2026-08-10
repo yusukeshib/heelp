@@ -29,12 +29,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self?.monitor.refresh()
         }
 
+        setupMainMenu()
         setupStatusItem()
         requestAccessibilityOnFirstLaunch()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         monitor.stop()
+    }
+
+    private func setupMainMenu() {
+        let mainMenu = NSMenu()
+        let editMenuItem = NSMenuItem()
+        let editMenu = NSMenu(title: "Edit")
+        editMenu.addItem(
+            NSMenuItem(
+                title: "Paste",
+                action: #selector(NSText.paste(_:)),
+                keyEquivalent: "v"
+            )
+        )
+        editMenuItem.submenu = editMenu
+        mainMenu.addItem(editMenuItem)
+        NSApp.mainMenu = mainMenu
     }
 
     private func setupStatusItem() {
