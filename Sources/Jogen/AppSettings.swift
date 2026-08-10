@@ -7,11 +7,27 @@ final class AppSettings {
     static let defaultModel = "claude-haiku-4-5-20251001"
     private static let retiredDefaultModel = "claude-3-5-haiku-20241022"
 
-    static let defaultPrompt = """
+    private static let retiredDefaultPrompt = """
     入力中の文章を確認し、文法上の間違いを指摘してください。
     より自然な表現があれば提案してください。
     説明と助言は日本語で、簡潔に表示してください。
     問題がない場合は、そのことを短く伝えてください。
+    """
+
+    private static let retiredTypingPrompt = """
+    入力中の文章を確認し、文法上の間違いを指摘してください。
+    より自然な表現があれば提案してください。
+    説明と助言は日本語で、簡潔に表示してください。
+    ユーザーにとって有用で具体的な助言がある場合だけ表示してください。
+    助言する必要がない場合は、確認メッセージも含めて何も表示しないでください。
+    """
+
+    static let defaultPrompt = """
+    選択された文章を確認し、文法上の間違いを指摘してください。
+    より自然な表現があれば提案してください。
+    説明と助言は日本語で、簡潔に表示してください。
+    ユーザーにとって有用で具体的な助言がある場合だけ表示してください。
+    助言する必要がない場合は、確認メッセージも含めて何も表示しないでください。
     """
 
     private enum Key {
@@ -19,6 +35,7 @@ final class AppSettings {
         static let prompt = "prompt"
         static let debounceMilliseconds = "debounceMilliseconds"
         static let diagnosticMode = "diagnosticMode"
+        static let didMigrateToSelectionMode = "didMigrateToSelectionMode"
     }
 
     private let defaults: UserDefaults
@@ -27,6 +44,17 @@ final class AppSettings {
         self.defaults = defaults
         if defaults.string(forKey: Key.model) == Self.retiredDefaultModel {
             defaults.set(Self.defaultModel, forKey: Key.model)
+        }
+        if let prompt = defaults.string(forKey: Key.prompt),
+           prompt == Self.retiredDefaultPrompt || prompt == Self.retiredTypingPrompt {
+            defaults.set(Self.defaultPrompt, forKey: Key.prompt)
+        }
+        if !defaults.bool(forKey: Key.didMigrateToSelectionMode) {
+            if defaults.object(forKey: Key.debounceMilliseconds) == nil ||
+                defaults.integer(forKey: Key.debounceMilliseconds) == 700 {
+                defaults.set(300, forKey: Key.debounceMilliseconds)
+            }
+            defaults.set(true, forKey: Key.didMigrateToSelectionMode)
         }
     }
 
@@ -42,7 +70,7 @@ final class AppSettings {
 
     var debounceMilliseconds: Int {
         get {
-            guard defaults.object(forKey: Key.debounceMilliseconds) != nil else { return 700 }
+            guard defaults.object(forKey: Key.debounceMilliseconds) != nil else { return 300 }
             return min(max(defaults.integer(forKey: Key.debounceMilliseconds), 250), 5_000)
         }
         set { defaults.set(min(max(newValue, 250), 5_000), forKey: Key.debounceMilliseconds) }

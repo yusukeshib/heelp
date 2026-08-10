@@ -112,7 +112,11 @@ final class ReviewCoordinator {
         lastRequestKey = requestKey
 
         if let cached = cache[requestKey] {
-            panel.show(result: cached, near: capture.caretBounds)
+            if cached.shouldDisplay {
+                panel.show(result: cached, near: capture.caretBounds)
+            } else {
+                panel.orderOut(nil)
+            }
             return
         }
 
@@ -130,6 +134,10 @@ final class ReviewCoordinator {
             else { return }
 
             store(result, for: requestKey)
+            guard result.shouldDisplay else {
+                panel.orderOut(nil)
+                return
+            }
             panel.show(result: result, near: capture.caretBounds)
         } catch is CancellationError {
             return
@@ -149,7 +157,7 @@ final class ReviewCoordinator {
 
     private func reviewableText(from value: String) -> String {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count > 4 else { return "" }
+        guard !trimmed.isEmpty else { return "" }
         return String(trimmed.suffix(4_000))
     }
 

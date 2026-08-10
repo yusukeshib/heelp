@@ -37,7 +37,7 @@ final class AccessibilityTextMonitor {
         }
 
         globalEventMonitor = NSEvent.addGlobalMonitorForEvents(
-            matching: [.keyDown, .leftMouseDown, .rightMouseDown]
+            matching: [.keyUp, .leftMouseUp, .rightMouseUp]
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.scheduleCapture()
@@ -83,6 +83,9 @@ final class AccessibilityTextMonitor {
             return
         }
 
+        if observedPID != nil {
+            onUnavailable?()
+        }
         detachAXObserver()
 
         var newObserver: AXObserver?
@@ -135,9 +138,14 @@ final class AccessibilityTextMonitor {
 
         guard let focused = focusedElement() else {
             observedElement = nil
+            onUnavailable?()
             return
         }
+        let focusChanged = observedElement.map { !CFEqual($0, focused) } ?? false
         observedElement = focused
+        if focusChanged {
+            onUnavailable?()
+        }
 
         let context = Unmanaged.passUnretained(self).toOpaque()
         AXObserverAddNotification(
@@ -188,12 +196,17 @@ final class AccessibilityTextMonitor {
     private func captureNow() {
         guard Self.isTrusted,
               let element = focusedElement(),
-              !isSecure(element),
-              let text = stringValue(of: element)
+              !isSecure(element)
         else {
             onUnavailable?()
             return
         }
+
+        // An empty selection is normal while the user edits. Keep the existing
+        // advice visible and wait until they deliberately select text again.
+        guard let text = selectedString(of: element),
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return }
 
         let application = observedPID.flatMap { NSRunningApplication(processIdentifier: $0) }
         let appName = application?.localizedName
@@ -215,11 +228,62 @@ final class AccessibilityTextMonitor {
         return element
     }
 
+    private func selectedString(of element: AXUIElement) -> String? {
+        if let selected = attribute(kAXSelectedTextAttribute as CFString, of: element) as? String,
+           !selected.isEmpty {
+            return selected
+        }
+        if let selected = textMarkerSelectedString(of: element), !selected.isEmpty {
+            return selected
+        }
+
+        guard let text = stringValue(of: element),
+              let range = selectedTextRange(of: element),
+              range.location >= 0,
+              range.length > 0,
+              range.location + range.length <= (text as NSString).length
+        else { return nil }
+        return (text as NSString).substring(
+            with: NSRange(location: range.location, length: range.length)
+        )
+    }
+
+    private func textMarkerSelectedString(of element: AXUIElement) -> String? {
+        var candidate: AXUIElement? = element
+        for _ in 0..<5 {
+            guard let current = candidate else { break }
+            if let markerRange = attribute("AXSelectedTextMarkerRange" as CFString, of: current) {
+                var result: CFTypeRef?
+                let error = AXUIElementCopyParameterizedAttributeValue(
+                    current,
+                    "AXStringForTextMarkerRange" as CFString,
+                    markerRange,
+                    &result
+                )
+                if error == .success, let string = result as? String, !string.isEmpty {
+                    return string
+                }
+            }
+            candidate = parent(of: current)
+        }
+        return nil
+    }
+
     private func stringValue(of element: AXUIElement) -> String? {
         let value = attribute(kAXValueAttribute as CFString, of: element)
         if let string = value as? String { return string }
         if let attributed = value as? NSAttributedString { return attributed.string }
         return nil
+    }
+
+    private func selectedTextRange(of element: AXUIElement) -> CFRange? {
+        guard let value = attribute(kAXSelectedTextRangeAttribute as CFString, of: element),
+              CFGetTypeID(value) == AXValueGetTypeID()
+        else { return nil }
+
+        var range = CFRange()
+        guard AXValueGetValue(value as! AXValue, .cfRange, &range) else { return nil }
+        return range
     }
 
     private func isSecure(_ element: AXUIElement) -> Bool {
@@ -257,14 +321,10 @@ final class AccessibilityTextMonitor {
     }
 
     private func characterRangeCaretBounds(of element: AXUIElement) -> CGRect? {
-        guard let value = attribute(kAXSelectedTextRangeAttribute as CFString, of: element),
-              CFGetTypeID(value) == AXValueGetTypeID()
+        guard var selectedRange = selectedTextRange(of: element),
+              selectedRange.length > 0,
+              let parameter = AXValueCreate(.cfRange, &selectedRange)
         else { return nil }
-
-        var selectedRange = CFRange()
-        guard AXValueGetValue(value as! AXValue, .cfRange, &selectedRange) else { return nil }
-        selectedRange.length = 0
-        guard let parameter = AXValueCreate(.cfRange, &selectedRange) else { return nil }
         return parameterizedRect(
             attribute: kAXBoundsForRangeParameterizedAttribute as CFString,
             parameter: parameter,

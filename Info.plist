@@ -23,6 +23,6 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSAccessibilityUsageDescription</key>
-    <string>Jogen reads the text in the focused input field to offer writing feedback before you send it.</string>
+    <string>Jogen reads text you select in other apps to offer writing feedback.</string>
 </dict>
 </plist>

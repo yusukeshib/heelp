@@ -49,7 +49,7 @@ final class SettingsWindowController: NSWindowController {
         let title = NSTextField(labelWithString: "Writing feedback")
         title.font = .systemFont(ofSize: 20, weight: .semibold)
 
-        let subtitle = NSTextField(wrappingLabelWithString: "Jogen waits for typing to settle, then reviews the focused text field. Your prompt controls the language and kind of advice.")
+        let subtitle = NSTextField(wrappingLabelWithString: "Select text in any app to review it. Jogen waits briefly for the selection to settle, then shows advice nearby.")
         subtitle.textColor = .secondaryLabelColor
 
         apiKeyField.placeholderString = "sk-ant-…"
@@ -102,7 +102,7 @@ final class SettingsWindowController: NSWindowController {
             modelField,
             label("Custom prompt"),
             promptScroll,
-            label("Debounce"),
+            label("Selection delay"),
             debounceRow,
             diagnosticButton,
             buttonRow
