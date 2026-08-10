@@ -1,0 +1,4 @@
+.build/
+.swiftpm/
+Jogen.app/
+.DS_Store
