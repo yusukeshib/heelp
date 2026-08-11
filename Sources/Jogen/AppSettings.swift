@@ -101,10 +101,6 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: Key.prompt) }
     }
 
-    var selectionDelayMilliseconds: Int {
-        runtimeOptions.selectionDelayMilliseconds
-    }
-
     var diagnosticMode: Bool {
         runtimeOptions.diagnosticMode
     }

@@ -4,6 +4,7 @@ import ApplicationServices
 @MainActor
 final class AccessibilityTextMonitor {
     var onCapture: ((CapturedText) -> Void)?
+    var onSelectionCleared: (() -> Void)?
     var onUnavailable: (() -> Void)?
 
     private var observer: AXObserver?
@@ -202,11 +203,12 @@ final class AccessibilityTextMonitor {
             return
         }
 
-        // An empty selection is normal while the user edits. Keep the existing
-        // advice visible and wait until they deliberately select text again.
         guard let text = selectedString(of: element),
               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else { return }
+        else {
+            onSelectionCleared?()
+            return
+        }
 
         let application = observedPID.flatMap { NSRunningApplication(processIdentifier: $0) }
         let appName = application?.localizedName

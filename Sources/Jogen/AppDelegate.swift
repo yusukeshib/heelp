@@ -12,11 +12,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         let settings = AppSettings.shared
         let suggestionPanel = SuggestionPanel()
-        coordinator = ReviewCoordinator(settings: settings, panel: suggestionPanel)
+        let triggerPanel = SelectionTriggerPanel()
+        coordinator = ReviewCoordinator(
+            settings: settings,
+            panel: suggestionPanel,
+            triggerPanel: triggerPanel
+        )
 
         monitor = AccessibilityTextMonitor()
         monitor.onCapture = { [weak self] capture in
             self?.coordinator.receive(capture)
+        }
+        monitor.onSelectionCleared = { [weak self] in
+            self?.coordinator.selectionCleared()
         }
         monitor.onUnavailable = { [weak self] in
             self?.coordinator.temporarilyUnavailable()

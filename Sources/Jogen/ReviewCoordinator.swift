@@ -4,21 +4,31 @@ import Foundation
 final class ReviewCoordinator {
     private let settings: AppSettings
     private let panel: SuggestionPanel
+    private let triggerPanel: SelectionTriggerPanel
     private let client = ReviewClient()
 
     private var reviewTask: Task<Void, Never>?
     private var unavailableTask: Task<Void, Never>?
     private var revision = 0
     private var lastCaptureSignature: String?
+    private var pendingCapture: CapturedText?
     private var lastRequestKey: String?
     private var cache: [String: ReviewResult] = [:]
     private var cacheOrder: [String] = []
 
-    init(settings: AppSettings, panel: SuggestionPanel) {
+    init(
+        settings: AppSettings,
+        panel: SuggestionPanel,
+        triggerPanel: SelectionTriggerPanel
+    ) {
         self.settings = settings
         self.panel = panel
+        self.triggerPanel = triggerPanel
         panel.onClose = { [weak self] in
             self?.dismiss()
+        }
+        triggerPanel.onReview = { [weak self] in
+            self?.reviewPendingSelection()
         }
     }
 
@@ -39,24 +49,28 @@ final class ReviewCoordinator {
         lastCaptureSignature = signature
 
         revision &+= 1
-        let currentRevision = revision
         reviewTask?.cancel()
+        reviewTask = nil
         lastRequestKey = nil
-        panel.showLoading(near: capture.caretBounds)
+        pendingCapture = CapturedText(
+            text: text,
+            caretBounds: capture.caretBounds,
+            applicationName: capture.applicationName
+        )
+        panel.orderOut(nil)
+        triggerPanel.show(near: capture.caretBounds)
+    }
 
-        let delay = UInt64(settings.selectionDelayMilliseconds) * 1_000_000
-        reviewTask = Task { [weak self] in
-            do {
-                try await Task.sleep(nanoseconds: delay)
-                guard !Task.isCancelled else { return }
-                await self?.review(text: text, capture: capture, revision: currentRevision)
-            } catch {
-                // Cancellation is expected whenever typing resumes.
-            }
-        }
+    func selectionCleared() {
+        lastCaptureSignature = nil
+        pendingCapture = nil
+        triggerPanel.orderOut(nil)
     }
 
     func temporarilyUnavailable() {
+        lastCaptureSignature = nil
+        pendingCapture = nil
+        triggerPanel.orderOut(nil)
         unavailableTask?.cancel()
         unavailableTask = Task { [weak self] in
             do {
@@ -76,7 +90,9 @@ final class ReviewCoordinator {
         unavailableTask?.cancel()
         unavailableTask = nil
         lastCaptureSignature = nil
+        pendingCapture = nil
         lastRequestKey = nil
+        triggerPanel.orderOut(nil)
         panel.orderOut(nil)
     }
 
@@ -84,6 +100,18 @@ final class ReviewCoordinator {
         dismiss()
         cache.removeAll()
         cacheOrder.removeAll()
+    }
+
+    private func reviewPendingSelection() {
+        guard let capture = pendingCapture else { return }
+        pendingCapture = nil
+        triggerPanel.orderOut(nil)
+
+        let currentRevision = revision
+        panel.showLoading(near: capture.caretBounds)
+        reviewTask = Task { [weak self] in
+            await self?.review(text: capture.text, capture: capture, revision: currentRevision)
+        }
     }
 
     private func review(text: String, capture: CapturedText, revision: Int) async {

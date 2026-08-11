@@ -52,7 +52,7 @@ final class SettingsWindowController: NSWindowController {
         let title = NSTextField(labelWithString: "Jogen Settings")
         title.font = .systemFont(ofSize: 20, weight: .semibold)
 
-        let subtitle = NSTextField(wrappingLabelWithString: "Select text in any app to review it. Jogen waits briefly for the selection to settle, then shows advice nearby.")
+        let subtitle = NSTextField(wrappingLabelWithString: "Select text in any app, then click the Jogen button nearby to review it.")
         subtitle.textColor = .secondaryLabelColor
 
         providerPopUp.addItems(withTitles: AIProvider.allCases.map(\.displayName))
