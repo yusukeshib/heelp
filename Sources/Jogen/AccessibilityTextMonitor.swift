@@ -13,6 +13,7 @@ final class AccessibilityTextMonitor {
     private var workspaceObserver: NSObjectProtocol?
     private var globalEventMonitor: Any?
     private var pendingCapture: DispatchWorkItem?
+    private var pendingPointerAnchor: CGRect?
     private var observedPID: pid_t?
 
     static var isTrusted: Bool {
@@ -39,8 +40,13 @@ final class AccessibilityTextMonitor {
 
         globalEventMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.keyUp, .leftMouseUp, .rightMouseUp]
-        ) { [weak self] _ in
+        ) { [weak self] event in
             Task { @MainActor in
+                if event.type == .leftMouseUp {
+                    self?.pendingPointerAnchor = PanelPositioning.accessibilityRect(
+                        atAppKitPoint: NSEvent.mouseLocation
+                    )
+                }
                 self?.scheduleCapture()
             }
         }
@@ -55,6 +61,7 @@ final class AccessibilityTextMonitor {
     func stop() {
         pendingCapture?.cancel()
         pendingCapture = nil
+        pendingPointerAnchor = nil
 
         if let workspaceObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(workspaceObserver)
@@ -195,6 +202,13 @@ final class AccessibilityTextMonitor {
     }
 
     private func captureNow() {
+        // Selection-change notifications can arrive repeatedly during a drag.
+        // Wait for mouse-up so the trigger follows the completed selection.
+        guard (NSEvent.pressedMouseButtons & 1) == 0 else { return }
+
+        let pointerAnchor = pendingPointerAnchor
+        pendingPointerAnchor = nil
+
         guard Self.isTrusted,
               let element = focusedElement(),
               !isSecure(element)
@@ -215,7 +229,9 @@ final class AccessibilityTextMonitor {
         onCapture?(
             CapturedText(
                 text: text,
-                caretBounds: caretBounds(of: element) ?? elementBounds(of: element),
+                caretBounds: caretBounds(of: element)
+                    ?? pointerAnchor
+                    ?? elementBounds(of: element),
                 applicationName: appName
             )
         )
@@ -297,10 +313,10 @@ final class AccessibilityTextMonitor {
     }
 
     private func caretBounds(of element: AXUIElement) -> CGRect? {
-        textMarkerCaretBounds(of: element) ?? characterRangeCaretBounds(of: element)
+        characterRangeCaretBounds(of: element) ?? textMarkerCaretBounds(of: element)
     }
 
-    /// WebKit, Chromium, and Electron commonly expose insertion geometry through
+    /// WebKit, Chromium, and Electron commonly expose selection geometry through
     /// text markers rather than the standard CFRange accessibility attributes.
     private func textMarkerCaretBounds(of element: AXUIElement) -> CGRect? {
         var candidate: AXUIElement? = element
@@ -309,13 +325,41 @@ final class AccessibilityTextMonitor {
         // focused element, so walk a small bounded portion of the AX tree.
         for _ in 0..<5 {
             guard let current = candidate else { break }
-            if let markerRange = attribute("AXSelectedTextMarkerRange" as CFString, of: current),
-               let rect = parameterizedRect(
-                   attribute: "AXBoundsForTextMarkerRange" as CFString,
-                   parameter: markerRange,
-                   of: current
-               ) {
-                return rect
+            if let value = attribute("AXSelectedTextMarkerRange" as CFString, of: current),
+               CFGetTypeID(value) == AXTextMarkerRangeGetTypeID() {
+                let selectedRange = value as! AXTextMarkerRange
+                let endMarker = AXTextMarkerRangeCopyEndMarker(selectedRange)
+
+                if let previousValue = parameterizedValue(
+                    attribute: "AXPreviousTextMarkerForTextMarker" as CFString,
+                    parameter: endMarker,
+                    of: current
+                ), CFGetTypeID(previousValue) == AXTextMarkerGetTypeID() {
+                    let previousMarker = previousValue as! AXTextMarker
+                    let endpointRange = AXTextMarkerRangeCreate(
+                        nil,
+                        previousMarker,
+                        endMarker
+                    )
+                    if let rect = parameterizedRect(
+                        attribute: "AXBoundsForTextMarkerRange" as CFString,
+                        parameter: endpointRange,
+                        of: current
+                    ) {
+                        return rect
+                    }
+                }
+
+                // Some AX providers can resolve a collapsed marker range even
+                // when they do not expose the previous-marker operation.
+                let collapsedRange = AXTextMarkerRangeCreate(nil, endMarker, endMarker)
+                if let rect = parameterizedRect(
+                    attribute: "AXBoundsForTextMarkerRange" as CFString,
+                    parameter: collapsedRange,
+                    of: current
+                ) {
+                    return rect
+                }
             }
             candidate = parent(of: current)
         }
@@ -324,9 +368,11 @@ final class AccessibilityTextMonitor {
 
     private func characterRangeCaretBounds(of element: AXUIElement) -> CGRect? {
         guard var selectedRange = selectedTextRange(of: element),
-              selectedRange.length > 0,
-              let parameter = AXValueCreate(.cfRange, &selectedRange)
+              selectedRange.length > 0
         else { return nil }
+        selectedRange.location += selectedRange.length - 1
+        selectedRange.length = 1
+        guard let parameter = AXValueCreate(.cfRange, &selectedRange) else { return nil }
         return parameterizedRect(
             attribute: kAXBoundsForRangeParameterizedAttribute as CFString,
             parameter: parameter,
@@ -339,16 +385,11 @@ final class AccessibilityTextMonitor {
         parameter: CFTypeRef,
         of element: AXUIElement
     ) -> CGRect? {
-        var result: CFTypeRef?
-        let error = AXUIElementCopyParameterizedAttributeValue(
-            element,
-            name,
-            parameter,
-            &result
-        )
-        guard error == .success,
-              let result,
-              CFGetTypeID(result) == AXValueGetTypeID()
+        guard let result = parameterizedValue(
+            attribute: name,
+            parameter: parameter,
+            of: element
+        ), CFGetTypeID(result) == AXValueGetTypeID()
         else { return nil }
 
         var rect = CGRect.zero
@@ -357,6 +398,22 @@ final class AccessibilityTextMonitor {
               rect.height > 0
         else { return nil }
         return rect
+    }
+
+    private func parameterizedValue(
+        attribute name: CFString,
+        parameter: CFTypeRef,
+        of element: AXUIElement
+    ) -> CFTypeRef? {
+        var result: CFTypeRef?
+        let error = AXUIElementCopyParameterizedAttributeValue(
+            element,
+            name,
+            parameter,
+            &result
+        )
+        guard error == .success else { return nil }
+        return result
     }
 
     private func parent(of element: AXUIElement) -> AXUIElement? {

@@ -58,7 +58,9 @@ final class SelectionTriggerPanel: NSPanel {
     func show(near accessibilityRect: CGRect?) {
         let panelSize = NSSize(width: 88, height: 34)
         setContentSize(panelSize)
-        setFrameOrigin(origin(for: panelSize, near: accessibilityRect))
+        setFrameOrigin(
+            PanelPositioning.origin(for: panelSize, near: accessibilityRect, gap: 6)
+        )
         orderFrontRegardless()
     }
 
@@ -66,42 +68,4 @@ final class SelectionTriggerPanel: NSPanel {
         onReview?()
     }
 
-    private func origin(for panelSize: NSSize, near accessibilityRect: CGRect?) -> NSPoint {
-        let anchor = accessibilityRect.map(convertFromAccessibilityCoordinates)
-            ?? fallbackAnchor()
-        let targetScreen = NSScreen.screens.first { $0.frame.intersects(anchor) }
-            ?? NSScreen.main
-        guard let visible = targetScreen?.visibleFrame else { return .zero }
-
-        var x = anchor.minX
-        var y = anchor.maxY + 6
-        if y + panelSize.height > visible.maxY {
-            y = anchor.minY - panelSize.height - 6
-        }
-        x = min(max(x, visible.minX + 8), visible.maxX - panelSize.width - 8)
-        y = min(max(y, visible.minY + 8), visible.maxY - panelSize.height - 8)
-        return NSPoint(x: x, y: y)
-    }
-
-    private func convertFromAccessibilityCoordinates(_ rect: CGRect) -> CGRect {
-        let mainHeight = NSScreen.screens
-            .first { $0.frame.origin == .zero }?
-            .frame.height ?? NSScreen.main?.frame.height ?? 0
-        return CGRect(
-            x: rect.origin.x,
-            y: mainHeight - rect.maxY,
-            width: rect.width,
-            height: rect.height
-        )
-    }
-
-    private func fallbackAnchor() -> CGRect {
-        guard let screen = NSScreen.main else { return .zero }
-        return CGRect(
-            x: screen.visibleFrame.midX,
-            y: screen.visibleFrame.midY,
-            width: 1,
-            height: 1
-        )
-    }
 }
