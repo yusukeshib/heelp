@@ -8,6 +8,8 @@ private final class ReviewButton: NSButton {
 final class SelectionTriggerPanel: NSPanel {
     var onReview: (() -> Void)?
 
+    private let button = ReviewButton(title: "", target: nil, action: nil)
+
     init() {
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 88, height: 34),
@@ -33,14 +35,15 @@ final class SelectionTriggerPanel: NSPanel {
         effect.layer?.masksToBounds = true
         contentView = effect
 
-        let button = ReviewButton(title: "Jogen", target: self, action: #selector(reviewSelection))
+        button.target = self
+        button.action = #selector(reviewSelection)
         button.bezelStyle = .recessed
         button.isBordered = false
         button.font = .systemFont(ofSize: 12, weight: .semibold)
         button.image = NSImage(systemSymbolName: "text.bubble", accessibilityDescription: nil)
         button.imagePosition = .imageLeading
         button.contentTintColor = .labelColor
-        button.toolTip = "Review this selection with Jogen"
+        button.cell?.lineBreakMode = .byTruncatingTail
         button.translatesAutoresizingMaskIntoConstraints = false
         effect.addSubview(button)
 
@@ -55,8 +58,11 @@ final class SelectionTriggerPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
-    func show(near accessibilityRect: CGRect?) {
-        let panelSize = NSSize(width: 88, height: 34)
+    func show(near accessibilityRect: CGRect?, promptName: String) {
+        button.title = promptName
+        button.toolTip = "Run \(promptName)"
+        let width = min(max(button.intrinsicContentSize.width + 16, 88), 280)
+        let panelSize = NSSize(width: width, height: 34)
         setContentSize(panelSize)
         setFrameOrigin(
             PanelPositioning.origin(for: panelSize, near: accessibilityRect, gap: 6)

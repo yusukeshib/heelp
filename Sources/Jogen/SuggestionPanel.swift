@@ -8,7 +8,7 @@ private final class CopyControl: NSView {
     var onClick: (() -> Void)?
 
     private let icon = NSImageView()
-    private let label = NSTextField(labelWithString: "Copy suggestion")
+    private let label = NSTextField(labelWithString: "Copy result")
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -162,7 +162,7 @@ final class SuggestionPanel: NSPanel {
         copyButton.onClick = { [weak self] in
             self?.copySuggestion()
         }
-        copyButton.toolTip = "Copy the suggested text"
+        copyButton.toolTip = "Copy the result"
 
         let headerRow = NSStackView(views: [headingLabel, NSView(), closeButton])
         headerRow.orientation = .horizontal
@@ -221,18 +221,19 @@ final class SuggestionPanel: NSPanel {
         progressIndicator.stopAnimation(nil)
         progressRow.isHidden = true
         headingLabel.stringValue = heading
-        feedbackLabel.attributedStringValue = FeedbackMarkdown.render(result.feedback)
-        feedbackLabel.isHidden = false
+        let feedback = result.feedback.trimmingCharacters(in: .whitespacesAndNewlines)
+        feedbackLabel.attributedStringValue = FeedbackMarkdown.render(feedback)
+        feedbackLabel.isHidden = feedback.isEmpty
         currentSuggestion = result.suggestion
-        suggestionLabel.stringValue = result.hasSuggestion ? "→ \(result.suggestion)" : ""
+        suggestionLabel.stringValue = result.suggestion
         suggestionLabel.isHidden = !result.hasSuggestion
-        copyButton.setTitle("Copy suggestion")
+        copyButton.setTitle("Copy result")
         copyButton.isHidden = !result.hasSuggestion
         present(near: accessibilityRect)
     }
 
-    func showLoading(near accessibilityRect: CGRect?) {
-        headingLabel.stringValue = "Jogen"
+    func showLoading(near accessibilityRect: CGRect?, heading: String = "Jogen") {
+        headingLabel.stringValue = heading
         feedbackLabel.isHidden = true
         suggestionLabel.isHidden = true
         copyButton.isHidden = true
@@ -277,7 +278,7 @@ final class SuggestionPanel: NSPanel {
         pasteboard.setString(currentSuggestion, forType: .string)
         copyButton.setTitle("Copied")
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-            self?.copyButton.setTitle("Copy suggestion")
+            self?.copyButton.setTitle("Copy result")
         }
     }
 

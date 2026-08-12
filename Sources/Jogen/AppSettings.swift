@@ -15,10 +15,16 @@ final class AppSettings {
     選択内容が文章ではないなど、添削対象でない場合だけ何も表示しないでください。
     """
 
-    static let summarizePrompt = """
+    private static let retiredSummarizePrompt = """
     選択された文章を日本語で簡潔に要約してください。
     重要な情報と結論を優先し、元の意味を変えないでください。
     feedbackには要約についての短い説明を、suggestionには要約本文だけを入れてください。
+    """
+
+    static let summarizePrompt = """
+    選択された文章を日本語で簡潔に要約してください。
+    重要な情報と結論を優先し、元の意味を変えないでください。
+    説明や前置きは付けず、feedbackは空文字列にし、suggestionには要約本文だけを入れてください。
     """
 
     private enum Key {
@@ -42,6 +48,7 @@ final class AppSettings {
             defaults.set(Self.defaultModel, forKey: Key.model)
         }
         migratePromptProfilesIfNeeded()
+        updateBuiltInPromptsIfNeeded()
     }
 
     var provider: AIProvider {
@@ -146,5 +153,15 @@ final class AppSettings {
         defaults.set(data, forKey: Key.promptProfiles)
         defaults.set(profiles[0].id.uuidString, forKey: Key.selectedPromptID)
         defaults.removeObject(forKey: Key.prompt)
+    }
+
+    private func updateBuiltInPromptsIfNeeded() {
+        var profiles = promptProfiles
+        guard let index = profiles.firstIndex(where: {
+            $0.id == UUID(uuidString: "B80C363B-6C59-40B3-A52B-3505D42CB58E")
+        }), profiles[index].prompt == Self.retiredSummarizePrompt
+        else { return }
+        profiles[index].prompt = Self.summarizePrompt
+        promptProfiles = profiles
     }
 }

@@ -58,7 +58,10 @@ final class ReviewCoordinator {
             applicationName: capture.applicationName
         )
         panel.orderOut(nil)
-        triggerPanel.show(near: capture.caretBounds)
+        triggerPanel.show(
+            near: capture.caretBounds,
+            promptName: settings.selectedPrompt.name
+        )
     }
 
     func selectionCleared() {
@@ -108,13 +111,24 @@ final class ReviewCoordinator {
         triggerPanel.orderOut(nil)
 
         let currentRevision = revision
-        panel.showLoading(near: capture.caretBounds)
+        let promptProfile = settings.selectedPrompt
+        panel.showLoading(near: capture.caretBounds, heading: promptProfile.name)
         reviewTask = Task { [weak self] in
-            await self?.review(text: capture.text, capture: capture, revision: currentRevision)
+            await self?.review(
+                text: capture.text,
+                capture: capture,
+                promptProfile: promptProfile,
+                revision: currentRevision
+            )
         }
     }
 
-    private func review(text: String, capture: CapturedText, revision: Int) async {
+    private func review(
+        text: String,
+        capture: CapturedText,
+        promptProfile: PromptProfile,
+        revision: Int
+    ) async {
         guard revision == self.revision else { return }
 
         if settings.diagnosticMode {
@@ -129,7 +143,8 @@ final class ReviewCoordinator {
 
         let provider = settings.provider
         let model = settings.model
-        let prompt = settings.prompt
+        let prompt = promptProfile.prompt
+        let heading = promptProfile.name
         let apiKey = KeychainStore.apiKey(for: provider)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !apiKey.isEmpty else {
@@ -138,7 +153,8 @@ final class ReviewCoordinator {
                     feedback: "Open Jogen Settings and add a \(provider.displayName) API key.",
                     suggestion: ""
                 ),
-                near: capture.caretBounds
+                near: capture.caretBounds,
+                heading: heading
             )
             return
         }
@@ -150,7 +166,7 @@ final class ReviewCoordinator {
 
         if let cached = cache[requestKey] {
             if cached.shouldDisplay {
-                panel.show(result: cached, near: capture.caretBounds)
+                panel.show(result: cached, near: capture.caretBounds, heading: heading)
             } else {
                 panel.orderOut(nil)
             }
@@ -176,7 +192,7 @@ final class ReviewCoordinator {
                 panel.orderOut(nil)
                 return
             }
-            panel.show(result: result, near: capture.caretBounds)
+            panel.show(result: result, near: capture.caretBounds, heading: heading)
         } catch is CancellationError {
             return
         } catch {
