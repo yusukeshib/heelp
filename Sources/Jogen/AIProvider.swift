@@ -38,6 +38,17 @@ enum AIProvider: String, CaseIterable, Codable, Hashable {
         }
     }
 
+    /// Newer OpenAI models reject `max_tokens` and require `max_completion_tokens`.
+    /// OpenRouter normalizes `max_tokens` across all upstream models.
+    var usesMaxCompletionTokens: Bool {
+        switch self {
+        case .openAI:
+            return true
+        case .anthropic, .openRouter:
+            return false
+        }
+    }
+
     var keychainAccount: String {
         switch self {
         case .anthropic:

@@ -8,9 +8,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var monitor: AccessibilityTextMonitor!
     private var coordinator: ReviewCoordinator!
     private var settingsWindow: SettingsWindowController!
+    private var promptManagerWindow: PromptManagerWindowController!
+    private let settings = AppSettings.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let settings = AppSettings.shared
         let suggestionPanel = SuggestionPanel()
         let triggerPanel = SelectionTriggerPanel()
         coordinator = ReviewCoordinator(
@@ -35,6 +36,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         settingsWindow.onSave = { [weak self] in
             self?.coordinator.reset()
             self?.monitor.refresh()
+        }
+        promptManagerWindow = PromptManagerWindowController(settings: settings)
+        promptManagerWindow.onSave = { [weak self] in
+            self?.coordinator.reset()
+            self?.rebuildStatusMenu()
         }
 
         setupMainMenu()
@@ -69,9 +75,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             button.toolTip = "Jogen"
         }
 
+        rebuildStatusMenu()
+    }
+
+    private func rebuildStatusMenu() {
         let menu = NSMenu()
         menu.delegate = self
-        menu.addItem(NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ","))
+
+        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+        menu.addItem(.separator())
+
+        for profile in settings.promptProfiles {
+            let item = NSMenuItem(title: profile.name, action: #selector(selectPrompt(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = profile.id.uuidString
+            item.state = profile.id == settings.selectedPromptID ? .on : .off
+            menu.addItem(item)
+        }
+
+        let manageItem = NSMenuItem(title: "Manage Prompts…", action: #selector(showPromptManager), keyEquivalent: "")
+        manageItem.target = self
+        menu.addItem(manageItem)
         menu.addItem(.separator())
 
         accessibilityItem = NSMenuItem(
@@ -79,6 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             action: #selector(openAccessibilitySettings),
             keyEquivalent: ""
         )
+        accessibilityItem.target = self
         menu.addItem(accessibilityItem)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit Jogen", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -86,6 +113,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func menuWillOpen(_ menu: NSMenu) {
+        for item in menu.items where item.representedObject != nil {
+            guard let value = item.representedObject as? String,
+                  let id = UUID(uuidString: value)
+            else { continue }
+            item.state = id == settings.selectedPromptID ? .on : .off
+        }
         if AccessibilityTextMonitor.isTrusted {
             accessibilityItem.title = "Accessibility Access: Granted"
             accessibilityItem.state = .on
@@ -108,6 +141,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func showSettings() {
         coordinator.dismiss()
         settingsWindow.present()
+    }
+
+    @objc private func showPromptManager() {
+        coordinator.dismiss()
+        promptManagerWindow.present()
+    }
+
+    @objc private func selectPrompt(_ sender: NSMenuItem) {
+        guard let value = sender.representedObject as? String,
+              let id = UUID(uuidString: value)
+        else { return }
+        settings.selectedPromptID = id
+        coordinator.reset()
+        guard let menu = sender.menu else { return }
+        for item in menu.items where item.representedObject != nil {
+            item.state = item === sender ? NSControl.StateValue.on : .off
+        }
     }
 
     @objc private func openAccessibilitySettings() {

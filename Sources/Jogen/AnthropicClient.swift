@@ -46,7 +46,8 @@ private enum ReviewPrompt {
     Return only one valid JSON object with exactly these keys:
     {"show":true,"feedback":"brief feedback","suggestion":"replacement text or an empty string"}
     The feedback value must contain explanation only. Do not include complete replacement sentences, a suggestion list, or labels such as "Suggestion" in feedback.
-    The suggestion value must contain exactly one complete replacement for all selected text, with no label or explanation. If several rewrites are possible, choose the best one.
+    The feedback value may use only this limited Markdown: **bold** for short section labels, *emphasis* sparingly, `inline code` for identifiers or quoted source text, and lines beginning with "- " for lists. When covering multiple categories, use bold section labels to make the feedback easy to scan. Do not use Markdown headings, links, blockquotes, tables, fenced code blocks, HTML, or any other Markdown syntax.
+    The suggestion value must contain exactly one complete replacement for all selected text, with no label, explanation, or Markdown. If several rewrites are possible, choose the best one.
     Set show to true when the selected text is writing that should be reviewed, including when it has no problems.
     For correct writing, set show to true, briefly confirm that there are no issues in the user's requested language, and leave suggestion empty.
     Set show to false only when the selection is not reviewable writing or the user's instructions explicitly exclude it; then return empty strings for feedback and suggestion.
@@ -115,7 +116,8 @@ private struct OpenAICompatibleClient {
     ) async throws -> ReviewResult {
         let body = OpenAIChatRequest(
             model: model,
-            maxTokens: 500,
+            maxTokens: provider.usesMaxCompletionTokens ? 2000 : 500,
+            usesMaxCompletionTokens: provider.usesMaxCompletionTokens,
             messages: [
                 .init(role: "system", content: system),
                 .init(role: "user", content: user)
@@ -203,12 +205,24 @@ private struct AnthropicMessagesResponse: Decodable {
 private struct OpenAIChatRequest: Encodable {
     let model: String
     let maxTokens: Int
+    let usesMaxCompletionTokens: Bool
     let messages: [Message]
 
     enum CodingKeys: String, CodingKey {
         case model
         case maxTokens = "max_tokens"
+        case maxCompletionTokens = "max_completion_tokens"
         case messages
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(model, forKey: .model)
+        try container.encode(
+            maxTokens,
+            forKey: usesMaxCompletionTokens ? .maxCompletionTokens : .maxTokens
+        )
+        try container.encode(messages, forKey: .messages)
     }
 
     struct Message: Encodable {

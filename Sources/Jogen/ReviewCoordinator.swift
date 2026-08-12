@@ -128,6 +128,8 @@ final class ReviewCoordinator {
         }
 
         let provider = settings.provider
+        let model = settings.model
+        let prompt = settings.prompt
         let apiKey = KeychainStore.apiKey(for: provider)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !apiKey.isEmpty else {
@@ -141,7 +143,7 @@ final class ReviewCoordinator {
             return
         }
 
-        let requestKey = [provider.rawValue, settings.model, settings.prompt, text]
+        let requestKey = [provider.rawValue, model, prompt, text]
             .joined(separator: "\u{1F}")
         guard requestKey != lastRequestKey else { return }
         lastRequestKey = requestKey
@@ -159,9 +161,9 @@ final class ReviewCoordinator {
             let result = try await client.review(
                 text: text,
                 applicationName: capture.applicationName,
-                prompt: settings.prompt,
+                prompt: prompt,
                 provider: provider,
-                model: settings.model,
+                model: model,
                 apiKey: apiKey
             )
             guard !Task.isCancelled,

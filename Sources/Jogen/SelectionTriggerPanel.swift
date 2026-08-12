@@ -39,7 +39,7 @@ final class SelectionTriggerPanel: NSPanel {
         button.font = .systemFont(ofSize: 12, weight: .semibold)
         button.image = NSImage(systemSymbolName: "text.bubble", accessibilityDescription: nil)
         button.imagePosition = .imageLeading
-        button.contentTintColor = .controlAccentColor
+        button.contentTintColor = .labelColor
         button.toolTip = "Review this selection with Jogen"
         button.translatesAutoresizingMaskIntoConstraints = false
         effect.addSubview(button)

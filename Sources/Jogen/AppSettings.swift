@@ -7,29 +7,6 @@ final class AppSettings {
     static let defaultModel = AIProvider.anthropic.defaultModel
     private static let retiredDefaultModel = "claude-3-5-haiku-20241022"
 
-    private static let retiredDefaultPrompt = """
-    入力中の文章を確認し、文法上の間違いを指摘してください。
-    より自然な表現があれば提案してください。
-    説明と助言は日本語で、簡潔に表示してください。
-    問題がない場合は、そのことを短く伝えてください。
-    """
-
-    private static let retiredTypingPrompt = """
-    入力中の文章を確認し、文法上の間違いを指摘してください。
-    より自然な表現があれば提案してください。
-    説明と助言は日本語で、簡潔に表示してください。
-    ユーザーにとって有用で具体的な助言がある場合だけ表示してください。
-    助言する必要がない場合は、確認メッセージも含めて何も表示しないでください。
-    """
-
-    private static let retiredSelectionSilencePrompt = """
-    選択された文章を確認し、文法上の間違いを指摘してください。
-    より自然な表現があれば提案してください。
-    説明と助言は日本語で、簡潔に表示してください。
-    ユーザーにとって有用で具体的な助言がある場合だけ表示してください。
-    助言する必要がない場合は、確認メッセージも含めて何も表示しないでください。
-    """
-
     static let defaultPrompt = """
     選択された文章を確認し、文法上の間違いを指摘してください。
     より自然な表現があれば提案してください。
@@ -38,10 +15,18 @@ final class AppSettings {
     選択内容が文章ではないなど、添削対象でない場合だけ何も表示しないでください。
     """
 
+    static let summarizePrompt = """
+    選択された文章を日本語で簡潔に要約してください。
+    重要な情報と結論を優先し、元の意味を変えないでください。
+    feedbackには要約についての短い説明を、suggestionには要約本文だけを入れてください。
+    """
+
     private enum Key {
         static let provider = "provider"
         static let model = "model"
         static let prompt = "prompt"
+        static let promptProfiles = "promptProfiles"
+        static let selectedPromptID = "selectedPromptID"
     }
 
     private let defaults: UserDefaults
@@ -56,12 +41,7 @@ final class AppSettings {
         if defaults.string(forKey: Key.model) == Self.retiredDefaultModel {
             defaults.set(Self.defaultModel, forKey: Key.model)
         }
-        if let prompt = defaults.string(forKey: Key.prompt),
-           prompt == Self.retiredDefaultPrompt ||
-            prompt == Self.retiredTypingPrompt ||
-            prompt == Self.retiredSelectionSilencePrompt {
-            defaults.set(Self.defaultPrompt, forKey: Key.prompt)
-        }
+        migratePromptProfilesIfNeeded()
     }
 
     var provider: AIProvider {
@@ -96,16 +76,75 @@ final class AppSettings {
         }
     }
 
-    var prompt: String {
-        get { defaults.string(forKey: Key.prompt) ?? Self.defaultPrompt }
-        set { defaults.set(newValue, forKey: Key.prompt) }
+    var promptProfiles: [PromptProfile] {
+        get {
+            guard let data = defaults.data(forKey: Key.promptProfiles),
+                  let profiles = try? JSONDecoder().decode([PromptProfile].self, from: data),
+                  !profiles.isEmpty
+            else { return Self.builtInProfiles }
+            return profiles
+        }
+        set {
+            guard !newValue.isEmpty,
+                  let data = try? JSONEncoder().encode(newValue)
+            else { return }
+            defaults.set(data, forKey: Key.promptProfiles)
+            let storedID = defaults.string(forKey: Key.selectedPromptID).flatMap(UUID.init(uuidString:))
+            if storedID == nil || !newValue.contains(where: { $0.id == storedID }) {
+                defaults.set(newValue[0].id.uuidString, forKey: Key.selectedPromptID)
+            }
+        }
     }
 
-    var diagnosticMode: Bool {
-        runtimeOptions.diagnosticMode
+    var selectedPromptID: UUID {
+        get {
+            if let value = defaults.string(forKey: Key.selectedPromptID),
+               let id = UUID(uuidString: value),
+               promptProfiles.contains(where: { $0.id == id }) {
+                return id
+            }
+            return promptProfiles[0].id
+        }
+        set {
+            guard promptProfiles.contains(where: { $0.id == newValue }) else { return }
+            defaults.set(newValue.uuidString, forKey: Key.selectedPromptID)
+        }
     }
 
-    func resetPrompt() {
+    var selectedPrompt: PromptProfile {
+        promptProfiles.first(where: { $0.id == selectedPromptID }) ?? promptProfiles[0]
+    }
+
+    var prompt: String { selectedPrompt.prompt }
+
+    var diagnosticMode: Bool { runtimeOptions.diagnosticMode }
+
+    private static var builtInProfiles: [PromptProfile] {
+        [
+            PromptProfile(
+                id: UUID(uuidString: "A93C242E-B65B-4DC6-86B1-3992D8F71F53")!,
+                name: "Grammar correction in Japanese",
+                prompt: defaultPrompt
+            ),
+            PromptProfile(
+                id: UUID(uuidString: "B80C363B-6C59-40B3-A52B-3505D42CB58E")!,
+                name: "Summarize in Japanese",
+                prompt: summarizePrompt
+            )
+        ]
+    }
+
+    private func migratePromptProfilesIfNeeded() {
+        guard defaults.data(forKey: Key.promptProfiles) == nil else { return }
+        var profiles = Self.builtInProfiles
+        if let legacyPrompt = defaults.string(forKey: Key.prompt),
+           !legacyPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           legacyPrompt != Self.defaultPrompt {
+            profiles[0].prompt = legacyPrompt
+        }
+        guard let data = try? JSONEncoder().encode(profiles) else { return }
+        defaults.set(data, forKey: Key.promptProfiles)
+        defaults.set(profiles[0].id.uuidString, forKey: Key.selectedPromptID)
         defaults.removeObject(forKey: Key.prompt)
     }
 }

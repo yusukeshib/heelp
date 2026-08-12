@@ -14,7 +14,6 @@ final class SettingsWindowController: NSWindowController {
     private let apiKeyLabel = NSTextField(labelWithString: "API key")
     private let apiKeyField = NSSecureTextField()
     private let modelField = NSTextField()
-    private let promptTextView = NSTextView()
     private var displayedProvider: AIProvider = .anthropic
     private var drafts: [AIProvider: ProviderDraft] = [:]
 
@@ -22,7 +21,7 @@ final class SettingsWindowController: NSWindowController {
         self.settings = settings
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 580, height: 580),
+            contentRect: NSRect(x: 0, y: 0, width: 580, height: 365),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -62,31 +61,12 @@ final class SettingsWindowController: NSWindowController {
         styleLabel(apiKeyLabel)
         modelField.placeholderString = "Model ID"
 
-        promptTextView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
-        promptTextView.isRichText = false
-        promptTextView.isAutomaticQuoteSubstitutionEnabled = false
-        promptTextView.isAutomaticDashSubstitutionEnabled = false
-        promptTextView.isVerticallyResizable = true
-        promptTextView.isHorizontallyResizable = false
-        promptTextView.autoresizingMask = [.width]
-        promptTextView.textContainer?.widthTracksTextView = true
-        promptTextView.textContainerInset = NSSize(width: 6, height: 6)
-
-        let promptScroll = NSScrollView()
-        promptScroll.borderType = .bezelBorder
-        promptScroll.hasVerticalScroller = true
-        promptScroll.documentView = promptTextView
-        promptScroll.translatesAutoresizingMaskIntoConstraints = false
-        promptScroll.heightAnchor.constraint(equalToConstant: 210).isActive = true
-
-        let resetButton = NSButton(title: "Reset Prompt", target: self, action: #selector(resetPrompt))
         let saveButton = NSButton(title: "Save", target: self, action: #selector(save))
         saveButton.keyEquivalent = "\r"
         let buttonRow = NSStackView()
         buttonRow.orientation = .horizontal
         buttonRow.alignment = .centerY
         buttonRow.spacing = 8
-        buttonRow.addArrangedSubview(resetButton)
         buttonRow.addArrangedSubview(NSView())
         buttonRow.addArrangedSubview(saveButton)
 
@@ -99,8 +79,6 @@ final class SettingsWindowController: NSWindowController {
             apiKeyField,
             label("Model ID"),
             modelField,
-            label("Custom prompt"),
-            promptScroll,
             buttonRow
         ])
         stack.orientation = .vertical
@@ -118,7 +96,6 @@ final class SettingsWindowController: NSWindowController {
             providerPopUp.widthAnchor.constraint(equalTo: stack.widthAnchor),
             apiKeyField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             modelField.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            promptScroll.widthAnchor.constraint(equalTo: stack.widthAnchor),
             buttonRow.widthAnchor.constraint(equalTo: stack.widthAnchor)
         ])
     }
@@ -147,7 +124,6 @@ final class SettingsWindowController: NSWindowController {
         providerPopUp.selectItem(withTitle: displayedProvider.displayName)
         showDraft(for: displayedProvider)
 
-        promptTextView.string = settings.prompt
     }
 
     @objc private func providerChanged(_ sender: NSPopUpButton) {
@@ -179,18 +155,13 @@ final class SettingsWindowController: NSWindowController {
         modelField.stringValue = draft.model
     }
 
-    @objc private func resetPrompt() {
-        promptTextView.string = AppSettings.defaultPrompt
-    }
-
     @objc private func save() {
         captureDisplayedDraft()
         let provider = selectedProvider
         let draft = drafts[provider] ?? ProviderDraft(apiKey: "", model: provider.defaultModel)
         let model = draft.model.trimmingCharacters(in: .whitespacesAndNewlines)
-        let prompt = promptTextView.string.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !model.isEmpty, !prompt.isEmpty else {
-            showAlert(message: "Model ID and custom prompt cannot be empty.")
+        guard !model.isEmpty else {
+            showAlert(message: "Model ID cannot be empty.")
             return
         }
 
@@ -200,7 +171,7 @@ final class SettingsWindowController: NSWindowController {
                 let configuredModel = configuredDraft.model
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !configuredModel.isEmpty else {
-                    showAlert(message: "Model ID and custom prompt cannot be empty.")
+                    showAlert(message: "Model ID cannot be empty.")
                     return
                 }
                 try KeychainStore.setAPIKey(
@@ -210,7 +181,6 @@ final class SettingsWindowController: NSWindowController {
                 settings.setModel(configuredModel, for: configuredProvider)
             }
             settings.provider = provider
-            settings.prompt = prompt
             onSave?()
             window?.orderOut(nil)
         } catch {

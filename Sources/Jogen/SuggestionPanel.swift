@@ -17,11 +17,11 @@ private final class CopyControl: NSView {
         layer?.borderWidth = 1
 
         icon.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: nil)
-        icon.contentTintColor = .controlAccentColor
+        icon.contentTintColor = .labelColor
         icon.translatesAutoresizingMaskIntoConstraints = false
 
         label.font = .systemFont(ofSize: 11, weight: .semibold)
-        label.textColor = .controlAccentColor
+        label.textColor = .labelColor
 
         let row = NSStackView(views: [icon, label])
         row.orientation = .horizontal
@@ -67,8 +67,8 @@ private final class CopyControl: NSView {
     }
 
     private func updateColors() {
-        layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.14).cgColor
-        layer?.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.55).cgColor
+        layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.1).cgColor
+        layer?.borderColor = NSColor.labelColor.withAlphaComponent(0.3).cgColor
     }
 }
 
@@ -150,11 +150,12 @@ final class SuggestionPanel: NSPanel {
 
         feedbackLabel.font = .systemFont(ofSize: 13)
         feedbackLabel.textColor = .labelColor
+        feedbackLabel.allowsEditingTextAttributes = true
         feedbackLabel.maximumNumberOfLines = 0
         feedbackLabel.lineBreakMode = .byWordWrapping
 
         suggestionLabel.font = .systemFont(ofSize: 13, weight: .medium)
-        suggestionLabel.textColor = .controlAccentColor
+        suggestionLabel.textColor = .labelColor
         suggestionLabel.maximumNumberOfLines = 0
         suggestionLabel.lineBreakMode = .byWordWrapping
 
@@ -220,7 +221,7 @@ final class SuggestionPanel: NSPanel {
         progressIndicator.stopAnimation(nil)
         progressRow.isHidden = true
         headingLabel.stringValue = heading
-        feedbackLabel.stringValue = result.feedback
+        feedbackLabel.attributedStringValue = FeedbackMarkdown.render(result.feedback)
         feedbackLabel.isHidden = false
         currentSuggestion = result.suggestion
         suggestionLabel.stringValue = result.hasSuggestion ? "→ \(result.suggestion)" : ""
