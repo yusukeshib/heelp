@@ -11,10 +11,16 @@ enum PanelPositioning {
         )
     }
 
+    /// - Parameter reservedHeight: Height to test the above-the-anchor placement
+    ///   against, instead of the current height. A streaming panel grows as text
+    ///   arrives, and reserving its maximum height keeps that growth from
+    ///   tipping the panel past the screen edge and flipping it below the anchor
+    ///   mid-review.
     static func origin(
         for panelSize: NSSize,
         near accessibilityRect: CGRect?,
-        gap: CGFloat
+        gap: CGFloat,
+        reservedHeight: CGFloat? = nil
     ) -> NSPoint {
         let anchor = accessibilityRect.map(appKitRect(fromAccessibility:))
             ?? fallbackAnchor()
@@ -24,7 +30,7 @@ enum PanelPositioning {
 
         var x = anchor.maxX
         var y = anchor.maxY + gap
-        if y + panelSize.height > visible.maxY {
+        if y + max(reservedHeight ?? panelSize.height, panelSize.height) > visible.maxY {
             y = anchor.minY - panelSize.height - gap
         }
 

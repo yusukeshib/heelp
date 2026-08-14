@@ -90,6 +90,12 @@ final class SuggestionPanel: NSPanel {
     private var bodyHeightConstraint: NSLayoutConstraint!
     private var currentSuggestion = ""
 
+    /// Set for the duration of a review so every frame of a growing response is
+    /// placed on the same side of the caret.
+    private var reservedPlacementHeight: CGFloat?
+
+    private static let maximumPanelHeight: CGFloat = 460
+
     init() {
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 380, height: 120),
@@ -217,7 +223,42 @@ final class SuggestionPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
-    func show(result: ReviewResult, near accessibilityRect: CGRect?, heading: String = "Jogen") {
+    /// Draws a response that is still arriving.
+    ///
+    /// The scroll position is left alone so text streaming in below the fold
+    /// cannot yank the reader back to the top mid-sentence, and the rewrite stays
+    /// uncopyable until it is known to be complete.
+    func showStreaming(
+        _ partial: PartialReview,
+        near accessibilityRect: CGRect?,
+        heading: String = "Jogen"
+    ) {
+        headingLabel.stringValue = heading
+        let feedback = partial.feedback.trimmingCharacters(in: .whitespacesAndNewlines)
+        let suggestion = partial.suggestion.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if !feedback.isEmpty || !suggestion.isEmpty {
+            progressIndicator.stopAnimation(nil)
+            progressRow.isHidden = true
+        }
+
+        feedbackLabel.attributedStringValue = FeedbackMarkdown.render(feedback)
+        feedbackLabel.isHidden = feedback.isEmpty
+        suggestionLabel.stringValue = suggestion
+        suggestionLabel.isHidden = suggestion.isEmpty
+        copyButton.isHidden = true
+        currentSuggestion = ""
+        present(near: accessibilityRect, resetScroll: false)
+    }
+
+    /// - Parameter preservingScroll: Keeps the reader where they are, for the
+    ///   final frame of a response they have already begun scrolling through.
+    func show(
+        result: ReviewResult,
+        near accessibilityRect: CGRect?,
+        heading: String = "Jogen",
+        preservingScroll: Bool = false
+    ) {
         progressIndicator.stopAnimation(nil)
         progressRow.isHidden = true
         headingLabel.stringValue = heading
@@ -229,7 +270,7 @@ final class SuggestionPanel: NSPanel {
         suggestionLabel.isHidden = !result.hasSuggestion
         copyButton.setTitle("Copy result")
         copyButton.isHidden = !result.hasSuggestion
-        present(near: accessibilityRect)
+        present(near: accessibilityRect, resetScroll: !preservingScroll)
     }
 
     func showLoading(near accessibilityRect: CGRect?, heading: String = "Jogen") {
@@ -240,24 +281,40 @@ final class SuggestionPanel: NSPanel {
         currentSuggestion = ""
         progressRow.isHidden = false
         progressIndicator.startAnimation(nil)
+        reservedPlacementHeight = Self.maximumPanelHeight
         present(near: accessibilityRect)
     }
 
-    private func present(near accessibilityRect: CGRect?) {
+    override func orderOut(_ sender: Any?) {
+        reservedPlacementHeight = nil
+        super.orderOut(sender)
+    }
+
+    private func present(near accessibilityRect: CGRect?, resetScroll: Bool = true) {
         bodyStack.setFrameSize(NSSize(width: 352, height: 18))
         bodyStack.layoutSubtreeIfNeeded()
         let bodyHeight = max(bodyStack.fittingSize.height, 18)
         bodyStack.setFrameSize(NSSize(width: 352, height: bodyHeight))
         bodyHeightConstraint.constant = min(bodyHeight, 400)
-        bodyScrollView.contentView.scroll(to: .zero)
+        if resetScroll {
+            bodyScrollView.contentView.scroll(to: .zero)
+        }
         bodyScrollView.reflectScrolledClipView(bodyScrollView.contentView)
 
         contentView?.layoutSubtreeIfNeeded()
         let fittingHeight = stack.fittingSize.height + 24
-        let panelSize = NSSize(width: 380, height: min(max(fittingHeight, 72), 460))
+        let panelSize = NSSize(
+            width: 380,
+            height: min(max(fittingHeight, 72), Self.maximumPanelHeight)
+        )
         setContentSize(panelSize)
         setFrameOrigin(
-            PanelPositioning.origin(for: panelSize, near: accessibilityRect, gap: 8)
+            PanelPositioning.origin(
+                for: panelSize,
+                near: accessibilityRect,
+                gap: 8,
+                reservedHeight: reservedPlacementHeight
+            )
         )
         orderFrontRegardless()
     }

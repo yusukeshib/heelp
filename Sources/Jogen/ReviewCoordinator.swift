@@ -16,6 +16,9 @@ final class ReviewCoordinator {
     private var cache: [String: ReviewResult] = [:]
     private var cacheOrder: [String] = []
 
+    /// Shortest gap between intermediate frames drawn from a streaming response.
+    private static let streamFrameInterval: TimeInterval = 0.1
+
     init(
         settings: AppSettings,
         panel: SuggestionPanel,
@@ -174,7 +177,7 @@ final class ReviewCoordinator {
         }
 
         do {
-            let result = try await client.review(
+            let events = client.reviewStream(
                 text: text,
                 applicationName: capture.applicationName,
                 prompt: prompt,
@@ -182,17 +185,45 @@ final class ReviewCoordinator {
                 model: model,
                 apiKey: apiKey
             )
-            guard !Task.isCancelled,
-                  revision == self.revision,
-                  requestKey == lastRequestKey
-            else { return }
+            var lastFrame = Date.distantPast
 
-            store(result, for: requestKey)
-            guard result.shouldDisplay else {
-                panel.orderOut(nil)
-                return
+            for try await event in events {
+                guard !Task.isCancelled,
+                      revision == self.revision,
+                      requestKey == lastRequestKey
+                else { return }
+
+                switch event {
+                case .partial(let partial):
+                    // Redrawing per token would thrash layout for no benefit, and
+                    // a dropped frame costs nothing because the final event always
+                    // renders. Nothing is drawn until the model commits to showing
+                    // a review, so an excluded selection never flashes into view.
+                    guard partial.show != false, partial.hasContent else { continue }
+                    let now = Date()
+                    guard now.timeIntervalSince(lastFrame) >= Self.streamFrameInterval else {
+                        continue
+                    }
+                    lastFrame = now
+                    panel.showStreaming(
+                        partial,
+                        near: capture.caretBounds,
+                        heading: heading
+                    )
+                case .final(let result):
+                    store(result, for: requestKey)
+                    guard result.shouldDisplay else {
+                        panel.orderOut(nil)
+                        return
+                    }
+                    panel.show(
+                        result: result,
+                        near: capture.caretBounds,
+                        heading: heading,
+                        preservingScroll: true
+                    )
+                }
             }
-            panel.show(result: result, near: capture.caretBounds, heading: heading)
         } catch is CancellationError {
             return
         } catch {

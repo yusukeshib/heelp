@@ -45,6 +45,7 @@ enum ReviewError: LocalizedError {
     case api(provider: String, status: Int, message: String)
     case emptyResponse(provider: String)
     case malformedOutput(provider: String, output: String)
+    case stream(provider: String, message: String)
 
     var errorDescription: String? {
         switch self {
@@ -56,6 +57,8 @@ enum ReviewError: LocalizedError {
             return "\(provider) returned no text."
         case .malformedOutput(let provider, _):
             return "\(provider) returned an unexpected response format."
+        case .stream(let provider, let message):
+            return "\(provider) stream error: \(message)"
         }
     }
 }

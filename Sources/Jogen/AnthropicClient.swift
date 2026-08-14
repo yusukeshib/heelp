@@ -4,14 +4,14 @@ struct ReviewClient {
     private let anthropic = AnthropicClient()
     private let openAICompatible = OpenAICompatibleClient()
 
-    func review(
+    func reviewStream(
         text: String,
         applicationName: String?,
         prompt: String,
         provider: AIProvider,
         model: String,
         apiKey: String
-    ) async throws -> ReviewResult {
+    ) -> AsyncThrowingStream<ReviewStreamEvent, Error> {
         let system = ReviewPrompt.system
         let user = ReviewPrompt.user(
             text: text,
@@ -21,14 +21,14 @@ struct ReviewClient {
 
         switch provider {
         case .anthropic:
-            return try await anthropic.review(
+            return anthropic.reviewStream(
                 system: system,
                 user: user,
                 model: model,
                 apiKey: apiKey
             )
         case .openAI, .openRouter:
-            return try await openAICompatible.review(
+            return openAICompatible.reviewStream(
                 system: system,
                 user: user,
                 provider: provider,
@@ -72,84 +72,200 @@ private enum ReviewPrompt {
 }
 
 private struct AnthropicClient {
-    func review(
+    func reviewStream(
         system: String,
         user: String,
         model: String,
         apiKey: String
-    ) async throws -> ReviewResult {
-        let body = AnthropicMessagesRequest(
-            model: model,
-            maxTokens: 500,
-            system: system,
-            messages: [.init(role: "user", content: user)]
+    ) -> AsyncThrowingStream<ReviewStreamEvent, Error> {
+        streamReview(
+            provider: .anthropic,
+            decodeChunk: { try AnthropicStreamDecoder.chunk(from: $0, provider: .anthropic) },
+            makeRequest: {
+                let body = AnthropicMessagesRequest(
+                    model: model,
+                    maxTokens: 500,
+                    system: system,
+                    messages: [.init(role: "user", content: user)]
+                )
+
+                var request = URLRequest(url: AIProvider.anthropic.endpoint)
+                request.httpMethod = "POST"
+                request.setValue("application/json", forHTTPHeaderField: "content-type")
+                request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+                request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+                request.httpBody = try JSONEncoder().encode(body)
+                request.timeoutInterval = 30
+                return request
+            }
         )
-
-        var request = URLRequest(url: AIProvider.anthropic.endpoint)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "content-type")
-        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        request.httpBody = try JSONEncoder().encode(body)
-        request.timeoutInterval = 30
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        try validate(response: response, data: data, provider: .anthropic)
-
-        let envelope = try JSONDecoder().decode(AnthropicMessagesResponse.self, from: data)
-        let responseText = envelope.content
-            .filter { $0.type == "text" }
-            .compactMap(\.text)
-            .joined(separator: "\n")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return try decodeReviewResult(responseText, provider: .anthropic)
     }
 }
 
 private struct OpenAICompatibleClient {
-    func review(
+    func reviewStream(
         system: String,
         user: String,
         provider: AIProvider,
         model: String,
         apiKey: String
-    ) async throws -> ReviewResult {
-        let body = OpenAIChatRequest(
-            model: model,
-            maxTokens: provider.usesMaxCompletionTokens ? 2000 : 500,
-            usesMaxCompletionTokens: provider.usesMaxCompletionTokens,
-            reasoningEffort: ReasoningEffort.fastest(forModel: model, provider: provider),
-            usesNestedReasoning: provider.usesNestedReasoningParameter,
-            messages: [
-                .init(role: "system", content: system),
-                .init(role: "user", content: user)
-            ]
+    ) -> AsyncThrowingStream<ReviewStreamEvent, Error> {
+        streamReview(
+            provider: provider,
+            decodeChunk: { try OpenAIStreamDecoder.chunk(from: $0, provider: provider) },
+            makeRequest: {
+                let body = OpenAIChatRequest(
+                    model: model,
+                    maxTokens: provider.usesMaxCompletionTokens ? 2000 : 500,
+                    usesMaxCompletionTokens: provider.usesMaxCompletionTokens,
+                    reasoningEffort: ReasoningEffort.fastest(forModel: model, provider: provider),
+                    usesNestedReasoning: provider.usesNestedReasoningParameter,
+                    messages: [
+                        .init(role: "system", content: system),
+                        .init(role: "user", content: user)
+                    ]
+                )
+
+                var request = URLRequest(url: provider.endpoint)
+                request.httpMethod = "POST"
+                request.setValue("application/json", forHTTPHeaderField: "content-type")
+                request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "authorization")
+                request.httpBody = try JSONEncoder().encode(body)
+                request.timeoutInterval = 30
+                return request
+            }
         )
-
-        var request = URLRequest(url: provider.endpoint)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "content-type")
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "authorization")
-        request.httpBody = try JSONEncoder().encode(body)
-        request.timeoutInterval = 30
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        try validate(response: response, data: data, provider: provider)
-
-        let envelope = try JSONDecoder().decode(OpenAIChatResponse.self, from: data)
-        let responseText = envelope.choices
-            .compactMap(\.message.content)
-            .joined(separator: "\n")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return try decodeReviewResult(responseText, provider: provider)
     }
 }
 
-private func validate(response: URLResponse, data: Data, provider: AIProvider) throws {
+/// One decoded server-sent event, reduced to what the review cares about.
+private enum StreamChunk {
+    case text(String)
+    case ignore
+    case done
+}
+
+/// Consumes a server-sent-events response, republishing the review as it is
+/// written and finishing with the strict decode of the completed buffer.
+private func streamReview(
+    provider: AIProvider,
+    decodeChunk: @escaping (String) throws -> StreamChunk,
+    makeRequest: @escaping () throws -> URLRequest
+) -> AsyncThrowingStream<ReviewStreamEvent, Error> {
+    AsyncThrowingStream { continuation in
+        let task = Task {
+            do {
+                let (bytes, response) = try await URLSession.shared.bytes(for: try makeRequest())
+                try await validate(response: response, bytes: bytes, provider: provider)
+
+                var parser = StreamingReviewParser()
+                var published: PartialReview?
+
+                reading: for try await line in bytes.lines {
+                    try Task.checkCancellation()
+                    guard let payload = ssePayload(in: line) else { continue }
+
+                    switch try decodeChunk(payload) {
+                    case .done:
+                        break reading
+                    case .ignore:
+                        continue
+                    case .text(let text):
+                        parser.append(text)
+                        let partial = parser.partial
+                        guard partial != published else { continue }
+                        published = partial
+                        continuation.yield(.partial(partial))
+                    }
+                }
+
+                continuation.yield(
+                    .final(try decodeReviewResult(parser.raw, provider: provider))
+                )
+                continuation.finish()
+            } catch {
+                continuation.finish(throwing: error)
+            }
+        }
+        continuation.onTermination = { _ in task.cancel() }
+    }
+}
+
+/// Returns the payload of a `data:` line. Everything else carries no content:
+/// `event:` names, blank separators between events, and comment lines such as
+/// the `: OPENROUTER PROCESSING` keepalives OpenRouter sends while queueing.
+private func ssePayload(in line: String) -> String? {
+    guard line.hasPrefix("data:") else { return nil }
+    let payload = line.dropFirst("data:".count).trimmingCharacters(in: .whitespaces)
+    return payload.isEmpty ? nil : payload
+}
+
+private enum OpenAIStreamDecoder {
+    static func chunk(from payload: String, provider: AIProvider) throws -> StreamChunk {
+        guard payload != "[DONE]" else { return .done }
+        guard let data = payload.data(using: .utf8) else { return .ignore }
+
+        // Gateways may report a failure inside the stream rather than as an
+        // HTTP status, so surface it instead of silently truncating the review.
+        if let failure = try? JSONDecoder().decode(APIErrorEnvelope.self, from: data) {
+            throw ReviewError.stream(
+                provider: provider.displayName,
+                message: failure.error.message
+            )
+        }
+
+        guard let chunk = try? JSONDecoder().decode(OpenAIStreamChunk.self, from: data) else {
+            return .ignore
+        }
+        let text = chunk.choices.compactMap(\.delta.content).joined()
+        return text.isEmpty ? .ignore : .text(text)
+    }
+}
+
+private enum AnthropicStreamDecoder {
+    static func chunk(from payload: String, provider: AIProvider) throws -> StreamChunk {
+        guard let data = payload.data(using: .utf8),
+              let event = try? JSONDecoder().decode(AnthropicStreamEvent.self, from: data)
+        else { return .ignore }
+
+        switch event.type {
+        case "content_block_delta":
+            // Thinking, citation, and tool-input deltas share this event, so
+            // only text deltas may be appended to the JSON body.
+            guard event.delta?.type == "text_delta", let text = event.delta?.text else {
+                return .ignore
+            }
+            return .text(text)
+        case "message_stop":
+            // Anthropic has no `[DONE]` sentinel; this event ends the stream.
+            return .done
+        case "error":
+            throw ReviewError.stream(
+                provider: provider.displayName,
+                message: event.error?.message ?? "The stream ended unexpectedly."
+            )
+        default:
+            // message_start, content_block_start, content_block_stop,
+            // message_delta, and ping carry nothing to display.
+            return .ignore
+        }
+    }
+}
+
+private func validate(
+    response: URLResponse,
+    bytes: URLSession.AsyncBytes,
+    provider: AIProvider
+) async throws {
     guard let http = response as? HTTPURLResponse else {
         throw ReviewError.invalidResponse(provider: provider.displayName)
     }
     guard (200..<300).contains(http.statusCode) else {
+        // Failures answer with a regular body rather than an event stream.
+        var data = Data()
+        for try await byte in bytes {
+            data.append(byte)
+        }
         let apiError = try? JSONDecoder().decode(APIErrorEnvelope.self, from: data)
         let message = apiError?.error.message ?? String(data: data, encoding: .utf8) ?? "Unknown error"
         throw ReviewError.api(
@@ -181,12 +297,14 @@ private struct AnthropicMessagesRequest: Encodable {
     let maxTokens: Int
     let system: String
     let messages: [Message]
+    let stream = true
 
     enum CodingKeys: String, CodingKey {
         case model
         case maxTokens = "max_tokens"
         case system
         case messages
+        case stream
     }
 
     struct Message: Encodable {
@@ -195,12 +313,18 @@ private struct AnthropicMessagesRequest: Encodable {
     }
 }
 
-private struct AnthropicMessagesResponse: Decodable {
-    let content: [ContentBlock]
+private struct AnthropicStreamEvent: Decodable {
+    let type: String
+    let delta: Delta?
+    let error: ErrorBody?
 
-    struct ContentBlock: Decodable {
-        let type: String
+    struct Delta: Decodable {
+        let type: String?
         let text: String?
+    }
+
+    struct ErrorBody: Decodable {
+        let message: String?
     }
 }
 
@@ -245,6 +369,7 @@ private struct OpenAIChatRequest: Encodable {
         case reasoningEffort = "reasoning_effort"
         case reasoning
         case messages
+        case stream
     }
 
     struct Reasoning: Encodable {
@@ -266,6 +391,7 @@ private struct OpenAIChatRequest: Encodable {
             }
         }
         try container.encode(messages, forKey: .messages)
+        try container.encode(true, forKey: .stream)
     }
 
     struct Message: Encodable {
@@ -274,14 +400,14 @@ private struct OpenAIChatRequest: Encodable {
     }
 }
 
-private struct OpenAIChatResponse: Decodable {
+private struct OpenAIStreamChunk: Decodable {
     let choices: [Choice]
 
     struct Choice: Decodable {
-        let message: Message
+        let delta: Delta
     }
 
-    struct Message: Decodable {
+    struct Delta: Decodable {
         let content: String?
     }
 }
