@@ -291,6 +291,13 @@ final class SuggestionPanel: NSPanel {
     }
 
     private func present(near accessibilityRect: CGRect?, resetScroll: Bool = true) {
+        // The scroll view draws no background, so AppKit cannot infer contrast
+        // from the vibrant material behind it and falls back to the knob meant
+        // for light content — a near-black bar over a dark panel. Match the knob
+        // to the appearance the labels are already drawn for.
+        let isDark = effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        bodyScrollView.verticalScroller?.knobStyle = isDark ? .light : .dark
+
         bodyStack.setFrameSize(NSSize(width: 352, height: 18))
         bodyStack.layoutSubtreeIfNeeded()
         let bodyHeight = max(bodyStack.fittingSize.height, 18)
