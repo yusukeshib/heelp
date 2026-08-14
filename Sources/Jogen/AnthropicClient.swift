@@ -118,6 +118,8 @@ private struct OpenAICompatibleClient {
             model: model,
             maxTokens: provider.usesMaxCompletionTokens ? 2000 : 500,
             usesMaxCompletionTokens: provider.usesMaxCompletionTokens,
+            reasoningEffort: ReasoningEffort.fastest(forModel: model, provider: provider),
+            usesNestedReasoning: provider.usesNestedReasoningParameter,
             messages: [
                 .init(role: "system", content: system),
                 .init(role: "user", content: user)
@@ -202,17 +204,51 @@ private struct AnthropicMessagesResponse: Decodable {
     }
 }
 
+/// Reasoning models burn hidden tokens before emitting any visible output, which
+/// dominates latency for Jogen's short, interactive reviews. Requesting the
+/// cheapest effort each family accepts keeps responses fast.
+///
+/// The parameter must only be sent to models that support it: non-reasoning
+/// models such as `gpt-4.1-mini` reject it outright. Accepted values also differ
+/// by generation — `gpt-5` exposes `minimal`, while `gpt-5.1` and newer replaced
+/// it with `none`, and the o-series bottoms out at `low`.
+private enum ReasoningEffort {
+    static func fastest(forModel model: String, provider: AIProvider) -> String? {
+        // OpenRouter model IDs are vendor-qualified, e.g. `openai/gpt-5.6`.
+        let id = model.lowercased().split(separator: "/").last.map(String.init) ?? ""
+
+        if id == "gpt-5" || id.hasPrefix("gpt-5-") {
+            return "minimal"
+        }
+        if id.hasPrefix("gpt-5") {
+            return "none"
+        }
+        if id.hasPrefix("o1") || id.hasPrefix("o3") || id.hasPrefix("o4") {
+            return "low"
+        }
+        return nil
+    }
+}
+
 private struct OpenAIChatRequest: Encodable {
     let model: String
     let maxTokens: Int
     let usesMaxCompletionTokens: Bool
+    let reasoningEffort: String?
+    let usesNestedReasoning: Bool
     let messages: [Message]
 
     enum CodingKeys: String, CodingKey {
         case model
         case maxTokens = "max_tokens"
         case maxCompletionTokens = "max_completion_tokens"
+        case reasoningEffort = "reasoning_effort"
+        case reasoning
         case messages
+    }
+
+    struct Reasoning: Encodable {
+        let effort: String
     }
 
     func encode(to encoder: Encoder) throws {
@@ -222,6 +258,13 @@ private struct OpenAIChatRequest: Encodable {
             maxTokens,
             forKey: usesMaxCompletionTokens ? .maxCompletionTokens : .maxTokens
         )
+        if let reasoningEffort {
+            if usesNestedReasoning {
+                try container.encode(Reasoning(effort: reasoningEffort), forKey: .reasoning)
+            } else {
+                try container.encode(reasoningEffort, forKey: .reasoningEffort)
+            }
+        }
         try container.encode(messages, forKey: .messages)
     }
 
