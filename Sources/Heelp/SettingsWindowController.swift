@@ -102,14 +102,14 @@ final class SettingsWindowController: NSWindowController {
         modelField.placeholderString = "Model ID"
         thinkingLevelField.placeholderString = "none"
 
-        let saveButton = NSButton(title: "Save", target: self, action: #selector(save))
-        saveButton.keyEquivalent = "\r"
+        let updateButton = NSButton(title: "Update", target: self, action: #selector(update))
+        updateButton.keyEquivalent = "\r"
         let buttonRow = NSStackView()
         buttonRow.orientation = .horizontal
         buttonRow.alignment = .centerY
         buttonRow.spacing = 8
         buttonRow.addArrangedSubview(NSView())
-        buttonRow.addArrangedSubview(saveButton)
+        buttonRow.addArrangedSubview(updateButton)
 
         let stack = NSStackView(views: [
             subtitle,
@@ -250,7 +250,7 @@ final class SettingsWindowController: NSWindowController {
         thinkingLevelField.isHidden = !provider.supportsThinkingLevel
     }
 
-    @objc private func save() {
+    @objc private func update() {
         captureDisplayedDraft()
         let provider = selectedProvider
         let draft = drafts[provider] ?? ProviderDraft(
@@ -293,7 +293,7 @@ final class SettingsWindowController: NSWindowController {
     private func showAlert(message: String) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Could not save Heelp settings"
+        alert.messageText = "Could not update Heelp settings"
         alert.informativeText = message
         alert.beginSheetModal(for: window!)
     }

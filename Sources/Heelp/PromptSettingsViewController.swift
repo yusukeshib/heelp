@@ -13,6 +13,8 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
     private let nameField = NSTextField()
     private let promptTextView = NSTextView()
     private let deleteButton = NSButton(title: "−", target: nil, action: nil)
+    private let revertButton = NSButton(title: "Revert", target: nil, action: nil)
+    private var savedDrafts: [PromptProfile] = []
     private var drafts: [PromptProfile] = []
     private var displayedID: UUID?
 
@@ -33,10 +35,12 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
 
     func loadValues() {
         displayedID = nil
-        drafts = settings.promptProfiles
+        savedDrafts = settings.promptProfiles
+        drafts = savedDrafts
         tableView.reloadData()
         let selectedIndex = drafts.firstIndex(where: { $0.id == settings.selectedPromptID }) ?? 0
         selectDraft(at: selectedIndex)
+        updateRevertButton()
     }
 
     private func buildUI(in content: NSView) {
@@ -105,9 +109,12 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
         promptScroll.hasVerticalScroller = true
         promptScroll.documentView = promptTextView
 
+        revertButton.target = self
+        revertButton.action = #selector(revert)
+        revertButton.toolTip = "Discard Unsaved Changes"
         let updateButton = NSButton(title: "Update", target: self, action: #selector(update))
         updateButton.keyEquivalent = "\r"
-        let buttonRow = NSStackView(views: [NSView(), updateButton])
+        let buttonRow = NSStackView(views: [NSView(), revertButton, updateButton])
         buttonRow.orientation = .horizontal
         buttonRow.alignment = .centerY
         buttonRow.spacing = 8
@@ -225,6 +232,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
         captureDisplayedDraft()
         let profile = drafts.remove(at: sourceRow)
         drafts.insert(profile, at: destinationRow)
+        updateRevertButton()
         displayedID = nil
         tableView.reloadData()
         if let movedRow = drafts.firstIndex(where: { $0.id == profile.id }) {
@@ -244,6 +252,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
               let index = drafts.firstIndex(where: { $0.id == displayedID })
         else { return }
         drafts[index].name = nameField.stringValue
+        updateRevertButton()
         tableView.reloadData(
             forRowIndexes: IndexSet(integer: index),
             columnIndexes: IndexSet(integer: 0)
@@ -256,6 +265,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
               let index = drafts.firstIndex(where: { $0.id == displayedID })
         else { return }
         drafts[index].prompt = promptTextView.string
+        updateRevertButton()
     }
 
     private func selectDraft(at index: Int) {
@@ -271,6 +281,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
         else { return }
         drafts[index].name = nameField.stringValue
         drafts[index].prompt = promptTextView.string
+        updateRevertButton()
         tableView.reloadData(forRowIndexes: IndexSet(integer: index), columnIndexes: IndexSet(integer: 0))
     }
 
@@ -286,6 +297,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
         captureDisplayedDraft()
         let profile = PromptProfile(name: "New Prompt", prompt: "")
         drafts.append(profile)
+        updateRevertButton()
         tableView.reloadData()
         selectDraft(at: drafts.count - 1)
         nameField.selectText(nil)
@@ -297,8 +309,21 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
               let index = drafts.firstIndex(where: { $0.id == displayedID })
         else { return }
         drafts.remove(at: index)
+        updateRevertButton()
         tableView.reloadData()
         selectDraft(at: min(index, drafts.count - 1))
+    }
+
+    @objc private func revert() {
+        let selectedID = displayedID
+        displayedID = nil
+        drafts = savedDrafts
+        tableView.reloadData()
+        let selectedIndex = selectedID.flatMap { id in
+            drafts.firstIndex(where: { $0.id == id })
+        } ?? drafts.firstIndex(where: { $0.id == settings.selectedPromptID }) ?? 0
+        selectDraft(at: selectedIndex)
+        updateRevertButton()
     }
 
     @objc private func update() {
@@ -312,12 +337,18 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
             return
         }
         settings.promptProfiles = drafts
+        savedDrafts = drafts
+        updateRevertButton()
         tableView.reloadData()
         if let displayedID,
            let index = drafts.firstIndex(where: { $0.id == displayedID }) {
             showDraft(at: index)
         }
         onSave?()
+    }
+
+    private func updateRevertButton() {
+        revertButton.isEnabled = drafts != savedDrafts
     }
 
     private func showAlert(message: String) {
