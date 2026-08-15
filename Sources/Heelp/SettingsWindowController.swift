@@ -38,10 +38,6 @@ final class SettingsWindowController: NSWindowController {
 
         promptSettings.onSave = { [weak self] in
             self?.onSave?()
-            self?.window?.orderOut(nil)
-        }
-        promptSettings.onCancel = { [weak self] in
-            self?.window?.orderOut(nil)
         }
 
         buildUI(in: window)
@@ -289,7 +285,6 @@ final class SettingsWindowController: NSWindowController {
             }
             settings.provider = provider
             onSave?()
-            window?.orderOut(nil)
         } catch {
             showAlert(message: error.localizedDescription)
         }

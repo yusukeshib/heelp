@@ -1,9 +1,8 @@
 import AppKit
 
 @MainActor
-final class PromptSettingsViewController: NSViewController, NSTableViewDataSource, NSTableViewDelegate {
+final class PromptSettingsViewController: NSViewController, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate, NSTextViewDelegate {
     var onSave: (() -> Void)?
-    var onCancel: (() -> Void)?
 
     private static let promptRowPasteboardType = NSPasteboard.PasteboardType(
         "dev.yusukeshib.heelp.prompt-row"
@@ -88,7 +87,9 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
         listPane.widthAnchor.constraint(equalToConstant: 205).isActive = true
 
         nameField.placeholderString = "Prompt name"
+        nameField.delegate = self
 
+        promptTextView.delegate = self
         promptTextView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         promptTextView.isRichText = false
         promptTextView.isAutomaticQuoteSubstitutionEnabled = false
@@ -104,10 +105,9 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
         promptScroll.hasVerticalScroller = true
         promptScroll.documentView = promptTextView
 
-        let cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancel))
         let updateButton = NSButton(title: "Update", target: self, action: #selector(update))
         updateButton.keyEquivalent = "\r"
-        let buttonRow = NSStackView(views: [NSView(), cancelButton, updateButton])
+        let buttonRow = NSStackView(views: [NSView(), updateButton])
         buttonRow.orientation = .horizontal
         buttonRow.alignment = .centerY
         buttonRow.spacing = 8
@@ -238,6 +238,26 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
         showDraft(at: tableView.selectedRow)
     }
 
+    func controlTextDidChange(_ notification: Notification) {
+        guard let field = notification.object as? NSTextField, field === nameField,
+              let displayedID,
+              let index = drafts.firstIndex(where: { $0.id == displayedID })
+        else { return }
+        drafts[index].name = nameField.stringValue
+        tableView.reloadData(
+            forRowIndexes: IndexSet(integer: index),
+            columnIndexes: IndexSet(integer: 0)
+        )
+    }
+
+    func textDidChange(_ notification: Notification) {
+        guard let textView = notification.object as? NSTextView, textView === promptTextView,
+              let displayedID,
+              let index = drafts.firstIndex(where: { $0.id == displayedID })
+        else { return }
+        drafts[index].prompt = promptTextView.string
+    }
+
     private func selectDraft(at index: Int) {
         guard drafts.indices.contains(index) else { return }
         tableView.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false)
@@ -281,10 +301,6 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
         selectDraft(at: min(index, drafts.count - 1))
     }
 
-    @objc private func cancel() {
-        onCancel?()
-    }
-
     @objc private func update() {
         captureDisplayedDraft()
         for index in drafts.indices {
@@ -296,6 +312,11 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
             return
         }
         settings.promptProfiles = drafts
+        tableView.reloadData()
+        if let displayedID,
+           let index = drafts.firstIndex(where: { $0.id == displayedID }) {
+            showDraft(at: index)
+        }
         onSave?()
     }
 
