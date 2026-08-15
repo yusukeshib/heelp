@@ -5,7 +5,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
     var onSave: (() -> Void)?
 
     private static let promptRowPasteboardType = NSPasteboard.PasteboardType(
-        "dev.yusukeshib.mend.prompt-row"
+        "dev.yusukeshib.ppp.prompt-row"
     )
 
     private let settings: AppSettings
@@ -45,7 +45,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
 
     private func buildUI(in content: NSView) {
         let subtitle = NSTextField(
-            wrappingLabelWithString: "Create prompts, drag to reorder them, and select the active one from the mend menu."
+            wrappingLabelWithString: "Create prompts, drag to reorder them, and select the active one from the ppp menu."
         )
         subtitle.textColor = .secondaryLabelColor
 

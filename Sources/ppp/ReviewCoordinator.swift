@@ -158,7 +158,7 @@ final class ReviewCoordinator {
         guard !apiKey.isEmpty else {
             panel.show(
                 result: ReviewResult(
-                    feedback: "Open mend Settings and add a \(provider.displayName) API key.",
+                    feedback: "Open ppp Settings and add a \(provider.displayName) API key.",
                     suggestion: ""
                 ),
                 near: capture.caretBounds,
@@ -241,7 +241,7 @@ final class ReviewCoordinator {
                     suggestion: ""
                 ),
                 near: capture.caretBounds,
-                heading: "mend Error"
+                heading: "ppp Error"
             )
         }
     }

@@ -5,15 +5,15 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>mend</string>
+    <string>ppp</string>
     <key>CFBundleIdentifier</key>
-    <string>dev.yusukeshib.mend</string>
+    <string>dev.yusukeshib.ppp</string>
     <key>CFBundleIconFile</key>
-    <string>mend</string>
+    <string>ppp</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>mend</string>
+    <string>ppp</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -25,6 +25,6 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSAccessibilityUsageDescription</key>
-    <string>mend reads text you select in other apps to offer writing feedback.</string>
+    <string>ppp reads text you select in other apps to offer writing feedback.</string>
 </dict>
 </plist>

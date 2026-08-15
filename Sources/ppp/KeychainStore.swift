@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 enum KeychainStore {
-    private static let developmentService = "dev.yusukeshib.mend.dev"
+    private static let developmentService = "dev.yusukeshib.ppp.dev"
 
     private static var service: String {
         Bundle.main.bundleIdentifier ?? developmentService

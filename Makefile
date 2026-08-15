@@ -1,10 +1,10 @@
-APP = mend.app
-BIN = .build/release/mend
+APP = ppp.app
+BIN = .build/release/ppp
 # Keep a stable signature so Accessibility permission survives local rebuilds.
 # Distribution builds override this with a Developer ID Application identity.
 SIGN_IDENTITY ?= Apple Development: Yusuke Shibata (6F8N535B8W)
-BUNDLE_IDENTIFIER ?= dev.yusukeshib.mend.dev
-BUNDLE_NAME ?= mend Dev
+BUNDLE_IDENTIFIER ?= dev.yusukeshib.ppp.dev
+BUNDLE_NAME ?= ppp Dev
 # Distribution builds enable Hardened Runtime and a secure timestamp.
 CODESIGN_FLAGS ?=
 RUN_ARGS ?=
@@ -23,11 +23,11 @@ bundle: build
 	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $(BUNDLE_IDENTIFIER)" $(APP)/Contents/Info.plist
 	/usr/libexec/PlistBuddy -c "Set :CFBundleName $(BUNDLE_NAME)" $(APP)/Contents/Info.plist
 	cp $(BIN) $(APP)/Contents/MacOS/
-	cp Assets/mend.icns $(APP)/Contents/Resources/
+	cp Assets/ppp.icns $(APP)/Contents/Resources/
 	codesign --force $(CODESIGN_FLAGS) --sign "$(SIGN_IDENTITY)" $(APP)
 
 run: bundle
-	@pkill -x mend 2>/dev/null || true
+	@pkill -x ppp 2>/dev/null || true
 	@if [ -n "$(RUN_ARGS)" ]; then \
 		open $(APP) --args $(RUN_ARGS); \
 	else \
@@ -39,4 +39,4 @@ release:
 
 clean:
 	swift package clean
-	rm -rf $(APP) mend.dmg
+	rm -rf $(APP) ppp.dmg

@@ -3,7 +3,7 @@
 import AppKit
 import Foundation
 
-let outputURL = URL(fileURLWithPath: CommandLine.arguments.dropFirst().first ?? "Assets/mendIcon.png")
+let outputURL = URL(fileURLWithPath: CommandLine.arguments.dropFirst().first ?? "Assets/pppIcon.png")
 let size = 1024
 
 func color(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat, alpha: CGFloat = 1) -> NSColor {

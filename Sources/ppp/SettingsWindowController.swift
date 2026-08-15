@@ -31,7 +31,7 @@ final class SettingsWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "mend Settings"
+        window.title = "ppp Settings"
         window.isReleasedWhenClosed = false
         window.center()
         super.init(window: window)
@@ -89,7 +89,7 @@ final class SettingsWindowController: NSWindowController {
         let content = NSView()
 
         let subtitle = NSTextField(
-            wrappingLabelWithString: "Select text in any app, then click the mend button nearby to review it."
+            wrappingLabelWithString: "Select text in any app, then click the ppp button nearby to review it."
         )
         subtitle.textColor = .secondaryLabelColor
 
@@ -293,7 +293,7 @@ final class SettingsWindowController: NSWindowController {
     private func showAlert(message: String) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Could not update mend settings"
+        alert.messageText = "Could not update ppp settings"
         alert.informativeText = message
         alert.beginSheetModal(for: window!)
     }

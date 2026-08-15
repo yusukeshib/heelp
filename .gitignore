@@ -1,5 +1,5 @@
 .build/
 .swiftpm/
-mend.app/
-mend.dmg
+ppp.app/
+ppp.dmg
 .DS_Store

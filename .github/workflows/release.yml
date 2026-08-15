@@ -1,7 +1,7 @@
 name: Release
 
 # On each push to main, compare CFBundleShortVersionString with existing tags.
-# A new version builds, signs, notarizes, and publishes mend.dmg.
+# A new version builds, signs, notarizes, and publishes ppp.dmg.
 on:
   push:
     branches: [main]
@@ -101,5 +101,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          files: mend.dmg
+          files: ppp.dmg
           generate_release_notes: true

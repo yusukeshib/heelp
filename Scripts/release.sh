@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Build a Developer ID-signed, notarized, and stapled mend.dmg.
+# Build a Developer ID-signed, notarized, and stapled ppp.dmg.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-APP="mend.app"
-DMG="mend.dmg"
-NOTARY_PROFILE="${NOTARY_PROFILE:-mend-notary}"
+APP="ppp.app"
+DMG="ppp.dmg"
+NOTARY_PROFILE="${NOTARY_PROFILE:-ppp-notary}"
 
 SIGN_IDENTITY="${SIGN_IDENTITY:-$(security find-identity -v -p codesigning \
   | awk -F'"' '/Developer ID Application/{print $2; exit}')}"
@@ -23,8 +23,8 @@ fi
 echo "▸ Signing identity: $SIGN_IDENTITY"
 make bundle \
   SIGN_IDENTITY="$SIGN_IDENTITY" \
-  BUNDLE_IDENTIFIER="dev.yusukeshib.mend" \
-  BUNDLE_NAME="mend" \
+  BUNDLE_IDENTIFIER="dev.yusukeshib.ppp" \
+  BUNDLE_NAME="ppp" \
   CODESIGN_FLAGS="--options runtime --timestamp"
 
 printf '▸ Verifying signature…\n'
@@ -32,7 +32,7 @@ codesign --verify --strict --verbose=2 "$APP"
 
 printf '▸ Building %s…\n' "$DMG"
 rm -f "$DMG"
-hdiutil create -volname mend -srcfolder "$APP" -ov -format UDZO "$DMG" >/dev/null
+hdiutil create -volname ppp -srcfolder "$APP" -ov -format UDZO "$DMG" >/dev/null
 
 codesign --force --sign "$SIGN_IDENTITY" --timestamp "$DMG"
 
