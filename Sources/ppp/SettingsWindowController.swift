@@ -1,7 +1,7 @@
 import AppKit
 
 @MainActor
-final class SettingsWindowController: NSWindowController {
+final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     var onSave: (() -> Void)?
 
     private struct ProviderDraft {
@@ -13,13 +13,19 @@ final class SettingsWindowController: NSWindowController {
     private let settings: AppSettings
     private let promptSettings: PromptSettingsViewController
     private let providerPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
+    private let openRouterSignInButton = NSButton(
+        title: "Sign in with OpenRouter",
+        target: nil,
+        action: nil
+    )
     private let apiKeyLabel = NSTextField(labelWithString: "API key")
     private let apiKeyField = NSSecureTextField()
     private let modelField = NSTextField()
     private let thinkingLevelLabel = NSTextField(labelWithString: "Thinking level (empty to omit)")
     private let thinkingLevelField = NSTextField()
-    private var displayedProvider: AIProvider = .anthropic
+    private var displayedProvider: AIProvider = .openRouter
     private var drafts: [AIProvider: ProviderDraft] = [:]
+    private var openRouterSignInTask: Task<Void, Never>?
 
     init(settings: AppSettings) {
         self.settings = settings
@@ -35,6 +41,7 @@ final class SettingsWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.center()
         super.init(window: window)
+        window.delegate = self
 
         promptSettings.onSave = { [weak self] in
             self?.onSave?()
@@ -53,6 +60,10 @@ final class SettingsWindowController: NSWindowController {
         promptSettings.loadValues()
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        openRouterSignInTask?.cancel()
     }
 
     private func buildUI(in window: NSWindow) {
@@ -96,6 +107,8 @@ final class SettingsWindowController: NSWindowController {
         providerPopUp.addItems(withTitles: AIProvider.allCases.map(\.displayName))
         providerPopUp.target = self
         providerPopUp.action = #selector(providerChanged(_:))
+        openRouterSignInButton.target = self
+        openRouterSignInButton.action = #selector(signInWithOpenRouter)
 
         styleLabel(apiKeyLabel)
         styleLabel(thinkingLevelLabel)
@@ -115,6 +128,7 @@ final class SettingsWindowController: NSWindowController {
             subtitle,
             label("Provider"),
             providerPopUp,
+            openRouterSignInButton,
             apiKeyLabel,
             apiKeyField,
             label("Model ID"),
@@ -136,6 +150,7 @@ final class SettingsWindowController: NSWindowController {
             stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -16),
             subtitle.widthAnchor.constraint(equalTo: stack.widthAnchor),
             providerPopUp.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            openRouterSignInButton.widthAnchor.constraint(equalTo: stack.widthAnchor),
             apiKeyField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             modelField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             thinkingLevelField.widthAnchor.constraint(equalTo: stack.widthAnchor),
@@ -248,6 +263,59 @@ final class SettingsWindowController: NSWindowController {
         thinkingLevelField.stringValue = draft.thinkingLevel
         thinkingLevelLabel.isHidden = !provider.supportsThinkingLevel
         thinkingLevelField.isHidden = !provider.supportsThinkingLevel
+        refreshOpenRouterSignInButton(for: provider)
+    }
+
+    private func refreshOpenRouterSignInButton(for provider: AIProvider) {
+        openRouterSignInButton.isHidden = provider != .openRouter
+        guard provider == .openRouter else { return }
+
+        openRouterSignInButton.isEnabled = openRouterSignInTask == nil
+        if openRouterSignInTask != nil {
+            openRouterSignInButton.title = "Signing in…"
+        } else if drafts[.openRouter]?.apiKey
+            .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        {
+            openRouterSignInButton.title = "Reconnect OpenRouter"
+        } else {
+            openRouterSignInButton.title = "Sign in with OpenRouter"
+        }
+    }
+
+    @objc private func signInWithOpenRouter() {
+        guard displayedProvider == .openRouter, openRouterSignInTask == nil else { return }
+        captureDisplayedDraft()
+
+        openRouterSignInTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                openRouterSignInTask = nil
+                refreshOpenRouterSignInButton(for: displayedProvider)
+            }
+
+            do {
+                let apiKey = try await OpenRouterOAuthClient.signIn()
+                try Task.checkCancellation()
+                try KeychainStore.setAPIKey(apiKey, for: .openRouter)
+
+                drafts[.openRouter]?.apiKey = apiKey
+                if displayedProvider == .openRouter {
+                    apiKeyField.stringValue = apiKey
+                }
+                if displayedProvider == .openRouter {
+                    settings.provider = .openRouter
+                    onSave?()
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                showAlert(
+                    title: "Could not sign in with OpenRouter",
+                    message: error.localizedDescription
+                )
+            }
+        }
+        refreshOpenRouterSignInButton(for: .openRouter)
     }
 
     @objc private func update() {
@@ -290,10 +358,13 @@ final class SettingsWindowController: NSWindowController {
         }
     }
 
-    private func showAlert(message: String) {
+    private func showAlert(
+        title: String = "Could not update ppp settings",
+        message: String
+    ) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Could not update ppp settings"
+        alert.messageText = title
         alert.informativeText = message
         alert.beginSheetModal(for: window!)
     }

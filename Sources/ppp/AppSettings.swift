@@ -43,7 +43,7 @@ final class AppSettings {
         get {
             guard let value = defaults.string(forKey: Key.provider),
                   let provider = AIProvider(rawValue: value)
-            else { return .anthropic }
+            else { return .openRouter }
             return provider
         }
         set { defaults.set(newValue.rawValue, forKey: Key.provider) }
