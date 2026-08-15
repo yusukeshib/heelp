@@ -2,24 +2,37 @@ import Foundation
 import Security
 
 enum KeychainStore {
-    private static let releaseService = "dev.yusukeshib.heelp"
-    private static let developmentService = "dev.yusukeshib.heelp.dev"
-    private static let legacyService = "com.yusukeshibata.jogen"
-    private static let migrationKey = "didRepairMigratedAPIKeys"
+    private static let releaseService = "dev.yusukeshib.mend"
+    private static let developmentService = "dev.yusukeshib.mend.dev"
+    private static let migrationKey = "didMigrateMendAPIKeys"
+
+    private static var legacyServices: [String] {
+        switch service {
+        case releaseService:
+            return ["dev.yusukeshib.heelp", "com.yusukeshibata.jogen"]
+        case developmentService:
+            return ["dev.yusukeshib.heelp.dev", "dev.yusukeshib.heelp"]
+        default:
+            return []
+        }
+    }
 
     private static var service: String {
         Bundle.main.bundleIdentifier ?? developmentService
     }
 
     static func migrateLegacyAPIKeysIfNeeded(defaults: UserDefaults = .standard) {
-        guard service == releaseService, !defaults.bool(forKey: migrationKey) else { return }
+        let legacyServices = Self.legacyServices
+        guard !legacyServices.isEmpty, !defaults.bool(forKey: migrationKey) else { return }
         defaults.set(true, forKey: migrationKey)
 
         for provider in AIProvider.allCases {
-            if let data = apiKeyData(for: provider, service: releaseService) {
-                replaceAPIKeyData(data, for: provider, service: releaseService)
-            } else if let data = apiKeyData(for: provider, service: legacyService) {
-                replaceAPIKeyData(data, for: provider, service: releaseService)
+            if let data = apiKeyData(for: provider, service: service) {
+                replaceAPIKeyData(data, for: provider, service: service)
+            } else if let data = legacyServices.lazy.compactMap({
+                apiKeyData(for: provider, service: $0)
+            }).first {
+                replaceAPIKeyData(data, for: provider, service: service)
             }
         }
     }

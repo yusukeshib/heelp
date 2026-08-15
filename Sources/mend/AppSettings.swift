@@ -6,7 +6,16 @@ final class AppSettings {
 
     static let defaultThinkingLevel = "none"
 
-    private static let legacyDefaultsSuite = "com.yusukeshibata.jogen"
+    private static var legacyDefaultsSuites: [String] {
+        if Bundle.main.bundleIdentifier == "dev.yusukeshib.mend.dev" {
+            return [
+                "dev.yusukeshib.heelp.dev",
+                "dev.yusukeshib.heelp",
+                "com.yusukeshibata.jogen"
+            ]
+        }
+        return ["dev.yusukeshib.heelp", "com.yusukeshibata.jogen"]
+    }
 
     private static let defaultPrompt = """
     選択された文章を確認し、文法上の間違いを指摘してください。
@@ -43,17 +52,20 @@ final class AppSettings {
     }
 
     private func migrateLegacySettingsIfNeeded() {
-        guard let legacy = UserDefaults(suiteName: Self.legacyDefaultsSuite) else { return }
+        let legacyDefaults = Self.legacyDefaultsSuites.compactMap { UserDefaults(suiteName: $0) }
 
         let providerKeys = AIProvider.allCases.flatMap { provider in
             [modelKey(for: provider), thinkingLevelKey(for: provider)]
         }
         for key in [Key.provider] + providerKeys where defaults.object(forKey: key) == nil {
-            guard let value = legacy.object(forKey: key) else { continue }
+            guard let value = legacyDefaults.lazy.compactMap({ $0.object(forKey: key) }).first else {
+                continue
+            }
             defaults.set(value, forKey: key)
         }
 
         if defaults.data(forKey: Key.promptProfiles) == nil,
+           let legacy = legacyDefaults.first(where: { $0.data(forKey: Key.promptProfiles) != nil }),
            let profiles = legacy.data(forKey: Key.promptProfiles) {
             defaults.set(profiles, forKey: Key.promptProfiles)
             if let selectedPromptID = legacy.string(forKey: Key.selectedPromptID) {

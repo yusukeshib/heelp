@@ -22,17 +22,17 @@ jobs:
         run: >-
           make bundle
           SIGN_IDENTITY=-
-          BUNDLE_IDENTIFIER=dev.yusukeshib.heelp
-          BUNDLE_NAME=Heelp
+          BUNDLE_IDENTIFIER=dev.yusukeshib.mend
+          BUNDLE_NAME=mend
 
       - name: Verify bundle
         run: |
-          test -x Heelp.app/Contents/MacOS/Heelp
-          plutil -lint Heelp.app/Contents/Info.plist
-          codesign --verify --verbose Heelp.app
+          test -x mend.app/Contents/MacOS/mend
+          plutil -lint mend.app/Contents/Info.plist
+          codesign --verify --verbose mend.app
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Heelp.app
-          path: Heelp.app
+          name: mend.app
+          path: mend.app

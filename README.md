@@ -1,10 +1,10 @@
-# Heelp
+# mend
 
-[![CI](https://github.com/yusukeshib/heelp/actions/workflows/ci.yml/badge.svg)](https://github.com/yusukeshib/heelp/actions/workflows/ci.yml)
+[![CI](https://github.com/yusukeshib/mend/actions/workflows/ci.yml/badge.svg)](https://github.com/yusukeshib/mend/actions/workflows/ci.yml)
 
-Heelp is a macOS menu bar app that lets you run any LLM-powered prompt—translation, summarization, rewriting, and more—on selected text and see the result instantly in a nearby popup.
+mend is a macOS menu bar app that lets you run any LLM-powered prompt—translation, summarization, rewriting, and more—on selected text and see the result instantly in a nearby popup.
 
-![Heelp translating selected text](docs/images/heelp-main.png)
+![mend translating selected text](docs/images/mend-main.png)
 
 ## Features
 
@@ -15,11 +15,11 @@ Heelp is a macOS menu bar app that lets you run any LLM-powered prompt—transla
 ## Screenshots
 
 <p align="center">
-  <img src="docs/images/heelp-trigger.png" alt="Heelp trigger" width="49%">
-  <img src="docs/images/heelp-menu.png" alt="Heelp menu" width="49%">
+  <img src="docs/images/mend-trigger.png" alt="mend trigger" width="49%">
+  <img src="docs/images/mend-menu.png" alt="mend menu" width="49%">
 </p>
 
 <p align="center">
-  <img src="docs/images/heelp-settings-general.png" alt="Heelp general settings" width="49%">
-  <img src="docs/images/heelp-settings-prompts.png" alt="Heelp prompt settings" width="49%">
+  <img src="docs/images/mend-settings-general.png" alt="mend general settings" width="49%">
+  <img src="docs/images/mend-settings-prompts.png" alt="mend prompt settings" width="49%">
 </p>

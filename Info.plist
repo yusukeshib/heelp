@@ -5,15 +5,15 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>Heelp</string>
+    <string>mend</string>
     <key>CFBundleIdentifier</key>
-    <string>dev.yusukeshib.heelp</string>
+    <string>dev.yusukeshib.mend</string>
     <key>CFBundleIconFile</key>
-    <string>Heelp</string>
+    <string>mend</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Heelp</string>
+    <string>mend</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -25,6 +25,6 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSAccessibilityUsageDescription</key>
-    <string>Heelp reads text you select in other apps to offer writing feedback.</string>
+    <string>mend reads text you select in other apps to offer writing feedback.</string>
 </dict>
 </plist>
