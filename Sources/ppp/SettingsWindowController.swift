@@ -1,10 +1,10 @@
 import AppKit
 
 @MainActor
-final class SettingsWindowController: NSWindowController, NSWindowDelegate {
+final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTextFieldDelegate {
     var onSave: (() -> Void)?
 
-    private struct ProviderDraft {
+    private struct ProviderDraft: Equatable {
         var apiKey: String
         var model: String
         var thinkingLevel: String
@@ -23,8 +23,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let modelField = NSTextField()
     private let thinkingLevelLabel = NSTextField(labelWithString: "Thinking level (empty to omit)")
     private let thinkingLevelField = NSTextField()
+    private let revertButton = NSButton(title: "Revert", target: nil, action: nil)
+    private let updateButton = NSButton(title: "Update", target: nil, action: nil)
     private var displayedProvider: AIProvider = .openRouter
+    private var savedProvider: AIProvider = .openRouter
     private var drafts: [AIProvider: ProviderDraft] = [:]
+    private var savedDrafts: [AIProvider: ProviderDraft] = [:]
     private var openRouterSignInTask: Task<Void, Never>?
 
     init(settings: AppSettings) {
@@ -32,7 +36,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         promptSettings = PromptSettingsViewController(settings: settings)
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 700, height: 500),
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 500),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -110,25 +114,36 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         openRouterSignInButton.target = self
         openRouterSignInButton.action = #selector(signInWithOpenRouter)
 
+        let providerRow = NSStackView(views: [providerPopUp, openRouterSignInButton])
+        providerRow.orientation = .horizontal
+        providerRow.alignment = .centerY
+        providerRow.spacing = 8
+        providerPopUp.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        openRouterSignInButton.setContentHuggingPriority(.required, for: .horizontal)
+
         styleLabel(apiKeyLabel)
         styleLabel(thinkingLevelLabel)
+        apiKeyField.delegate = self
+        modelField.delegate = self
+        thinkingLevelField.delegate = self
         modelField.placeholderString = "Model ID"
         thinkingLevelField.placeholderString = "none"
 
-        let updateButton = NSButton(title: "Update", target: self, action: #selector(update))
+        revertButton.target = self
+        revertButton.action = #selector(revert)
+        revertButton.toolTip = "Discard Unsaved Changes"
+        updateButton.target = self
+        updateButton.action = #selector(update)
         updateButton.keyEquivalent = "\r"
-        let buttonRow = NSStackView()
+        let buttonRow = NSStackView(views: [NSView(), revertButton, updateButton])
         buttonRow.orientation = .horizontal
         buttonRow.alignment = .centerY
         buttonRow.spacing = 8
-        buttonRow.addArrangedSubview(NSView())
-        buttonRow.addArrangedSubview(updateButton)
 
         let stack = NSStackView(views: [
             subtitle,
             label("Provider"),
-            providerPopUp,
-            openRouterSignInButton,
+            providerRow,
             apiKeyLabel,
             apiKeyField,
             label("Model ID"),
@@ -149,8 +164,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 16),
             stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -16),
             subtitle.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            providerPopUp.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            openRouterSignInButton.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            providerRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
             apiKeyField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             modelField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             thinkingLevelField.widthAnchor.constraint(equalTo: stack.widthAnchor),
@@ -224,14 +238,27 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             )
         })
         displayedProvider = settings.provider
+        savedProvider = displayedProvider
+        savedDrafts = drafts
         providerPopUp.selectItem(withTitle: displayedProvider.displayName)
         showDraft(for: displayedProvider)
+        updateGeneralButtons()
     }
 
     @objc private func providerChanged(_ sender: NSPopUpButton) {
         captureDisplayedDraft()
         displayedProvider = selectedProvider
         showDraft(for: displayedProvider)
+        updateGeneralButtons()
+    }
+
+    func controlTextDidChange(_ notification: Notification) {
+        guard let field = notification.object as? NSTextField,
+              field === apiKeyField || field === modelField || field === thinkingLevelField
+        else { return }
+        captureDisplayedDraft()
+        refreshOpenRouterSignInButton(for: displayedProvider)
+        updateGeneralButtons()
     }
 
     private var selectedProvider: AIProvider {
@@ -272,13 +299,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
         openRouterSignInButton.isEnabled = openRouterSignInTask == nil
         if openRouterSignInTask != nil {
-            openRouterSignInButton.title = "Signing in…"
+            openRouterSignInButton.title = "Connecting…"
         } else if drafts[.openRouter]?.apiKey
             .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
         {
-            openRouterSignInButton.title = "Reconnect OpenRouter"
+            openRouterSignInButton.title = "Reconnect"
         } else {
-            openRouterSignInButton.title = "Sign in with OpenRouter"
+            openRouterSignInButton.title = "Connect"
         }
     }
 
@@ -291,6 +318,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             defer {
                 openRouterSignInTask = nil
                 refreshOpenRouterSignInButton(for: displayedProvider)
+                updateGeneralButtons()
             }
 
             do {
@@ -299,11 +327,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
                 try KeychainStore.setAPIKey(apiKey, for: .openRouter)
 
                 drafts[.openRouter]?.apiKey = apiKey
+                savedDrafts[.openRouter]?.apiKey = apiKey
                 if displayedProvider == .openRouter {
                     apiKeyField.stringValue = apiKey
-                }
-                if displayedProvider == .openRouter {
                     settings.provider = .openRouter
+                    savedProvider = .openRouter
                     onSave?()
                 }
             } catch is CancellationError {
@@ -316,46 +344,55 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             }
         }
         refreshOpenRouterSignInButton(for: .openRouter)
+        updateGeneralButtons()
+    }
+
+    @objc private func revert() {
+        drafts = savedDrafts
+        displayedProvider = savedProvider
+        providerPopUp.selectItem(withTitle: displayedProvider.displayName)
+        showDraft(for: displayedProvider)
+        updateGeneralButtons()
     }
 
     @objc private func update() {
         captureDisplayedDraft()
         let provider = selectedProvider
-        let draft = drafts[provider] ?? ProviderDraft(
-            apiKey: "",
-            model: provider.defaultModel,
-            thinkingLevel: AppSettings.defaultThinkingLevel
-        )
-        let model = draft.model.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !model.isEmpty else {
-            showAlert(message: "Model ID cannot be empty.")
-            return
-        }
 
         do {
             for configuredProvider in AIProvider.allCases {
                 guard let configuredDraft = drafts[configuredProvider] else { continue }
-                let configuredModel = configuredDraft.model
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !configuredModel.isEmpty else {
+                let normalizedDraft = ProviderDraft(
+                    apiKey: configuredDraft.apiKey.trimmingCharacters(in: .whitespacesAndNewlines),
+                    model: configuredDraft.model.trimmingCharacters(in: .whitespacesAndNewlines),
+                    thinkingLevel: configuredDraft.thinkingLevel
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+                guard !normalizedDraft.model.isEmpty else {
                     showAlert(message: "Model ID cannot be empty.")
                     return
                 }
-                try KeychainStore.setAPIKey(
-                    configuredDraft.apiKey.trimmingCharacters(in: .whitespacesAndNewlines),
-                    for: configuredProvider
-                )
-                settings.setModel(configuredModel, for: configuredProvider)
-                settings.setThinkingLevel(
-                    configuredDraft.thinkingLevel.trimmingCharacters(in: .whitespacesAndNewlines),
-                    for: configuredProvider
-                )
+                try KeychainStore.setAPIKey(normalizedDraft.apiKey, for: configuredProvider)
+                settings.setModel(normalizedDraft.model, for: configuredProvider)
+                settings.setThinkingLevel(normalizedDraft.thinkingLevel, for: configuredProvider)
+                drafts[configuredProvider] = normalizedDraft
             }
             settings.provider = provider
+            savedProvider = provider
+            savedDrafts = drafts
+            showDraft(for: displayedProvider)
+            updateGeneralButtons()
             onSave?()
         } catch {
             showAlert(message: error.localizedDescription)
         }
+    }
+
+    private func updateGeneralButtons() {
+        let hasChanges = selectedProvider != savedProvider || drafts != savedDrafts
+        let canApplyChanges = hasChanges && openRouterSignInTask == nil
+        revertButton.isEnabled = canApplyChanges
+        updateButton.isEnabled = canApplyChanges
     }
 
     private func showAlert(
