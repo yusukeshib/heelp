@@ -76,7 +76,7 @@ private final class CopyControl: NSView {
 final class SuggestionPanel: NSPanel {
     var onClose: (() -> Void)?
 
-    private let headingLabel = NSTextField(labelWithString: "Jogen")
+    private let headingLabel = NSTextField(labelWithString: "Heelp")
     private let feedbackLabel = NSTextField(wrappingLabelWithString: "")
     private let suggestionLabel = NSTextField(wrappingLabelWithString: "")
     private let progressIndicator = NSProgressIndicator()
@@ -231,7 +231,7 @@ final class SuggestionPanel: NSPanel {
     func showStreaming(
         _ partial: PartialReview,
         near accessibilityRect: CGRect?,
-        heading: String = "Jogen"
+        heading: String = "Heelp"
     ) {
         headingLabel.stringValue = heading
         let feedback = partial.feedback.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -256,7 +256,7 @@ final class SuggestionPanel: NSPanel {
     func show(
         result: ReviewResult,
         near accessibilityRect: CGRect?,
-        heading: String = "Jogen",
+        heading: String = "Heelp",
         preservingScroll: Bool = false
     ) {
         progressIndicator.stopAnimation(nil)
@@ -273,7 +273,7 @@ final class SuggestionPanel: NSPanel {
         present(near: accessibilityRect, resetScroll: !preservingScroll)
     }
 
-    func showLoading(near accessibilityRect: CGRect?, heading: String = "Jogen") {
+    func showLoading(near accessibilityRect: CGRect?, heading: String = "Heelp") {
         headingLabel.stringValue = heading
         feedbackLabel.isHidden = true
         suggestionLabel.isHidden = true

@@ -1,5 +1,5 @@
-APP = Jogen.app
-BIN = .build/release/Jogen
+APP = Heelp.app
+BIN = .build/release/Heelp
 # Keep a stable signature so Accessibility permission survives local rebuilds.
 # Distribution builds override this with a Developer ID Application identity.
 SIGN_IDENTITY ?= Apple Development: Yusuke Shibata (6F8N535B8W)
@@ -22,7 +22,7 @@ bundle: build
 	codesign --force $(CODESIGN_FLAGS) --sign "$(SIGN_IDENTITY)" $(APP)
 
 run: bundle
-	@pkill -x Jogen 2>/dev/null || true
+	@pkill -x Heelp 2>/dev/null || true
 	@if [ -n "$(RUN_ARGS)" ]; then \
 		open $(APP) --args $(RUN_ARGS); \
 	else \
@@ -34,4 +34,4 @@ release:
 
 clean:
 	swift package clean
-	rm -rf $(APP) Jogen.dmg
+	rm -rf $(APP) Heelp.dmg

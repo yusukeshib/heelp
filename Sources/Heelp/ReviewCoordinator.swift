@@ -158,7 +158,7 @@ final class ReviewCoordinator {
         guard !apiKey.isEmpty else {
             panel.show(
                 result: ReviewResult(
-                    feedback: "Open Jogen Settings and add a \(provider.displayName) API key.",
+                    feedback: "Open Heelp Settings and add a \(provider.displayName) API key.",
                     suggestion: ""
                 ),
                 near: capture.caretBounds,
@@ -241,7 +241,7 @@ final class ReviewCoordinator {
                     suggestion: ""
                 ),
                 near: capture.caretBounds,
-                heading: "Jogen Error"
+                heading: "Heelp Error"
             )
         }
     }

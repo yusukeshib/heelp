@@ -5,13 +5,13 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>Jogen</string>
+    <string>Heelp</string>
     <key>CFBundleIdentifier</key>
-    <string>com.yusukeshibata.jogen</string>
+    <string>dev.yusukeshib.heelp</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Jogen</string>
+    <string>Heelp</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -23,6 +23,6 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSAccessibilityUsageDescription</key>
-    <string>Jogen reads text you select in other apps to offer writing feedback.</string>
+    <string>Heelp reads text you select in other apps to offer writing feedback.</string>
 </dict>
 </plist>

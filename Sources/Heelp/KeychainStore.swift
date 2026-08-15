@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 enum KeychainStore {
-    private static let service = "com.yusukeshibata.jogen"
+    private static let service = "dev.yusukeshib.heelp"
     static func apiKey(for provider: AIProvider) -> String {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,

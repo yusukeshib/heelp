@@ -66,8 +66,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "text.bubble", accessibilityDescription: "Jogen")
-            button.toolTip = "Jogen"
+            button.image = NSImage(systemSymbolName: "text.bubble", accessibilityDescription: "Heelp")
+            button.toolTip = "Heelp"
         }
 
         rebuildStatusMenu()

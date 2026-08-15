@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Build a Developer ID-signed, notarized, and stapled Jogen.dmg.
+# Build a Developer ID-signed, notarized, and stapled Heelp.dmg.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-APP="Jogen.app"
-DMG="Jogen.dmg"
-NOTARY_PROFILE="${NOTARY_PROFILE:-jogen-notary}"
+APP="Heelp.app"
+DMG="Heelp.dmg"
+NOTARY_PROFILE="${NOTARY_PROFILE:-heelp-notary}"
 
 SIGN_IDENTITY="${SIGN_IDENTITY:-$(security find-identity -v -p codesigning \
   | awk -F'"' '/Developer ID Application/{print $2; exit}')}"
@@ -30,7 +30,7 @@ codesign --verify --strict --verbose=2 "$APP"
 
 printf '▸ Building %s…\n' "$DMG"
 rm -f "$DMG"
-hdiutil create -volname Jogen -srcfolder "$APP" -ov -format UDZO "$DMG" >/dev/null
+hdiutil create -volname Heelp -srcfolder "$APP" -ov -format UDZO "$DMG" >/dev/null
 
 codesign --force --sign "$SIGN_IDENTITY" --timestamp "$DMG"
 

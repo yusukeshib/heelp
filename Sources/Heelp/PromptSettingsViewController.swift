@@ -38,7 +38,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
 
     private func buildUI(in content: NSView) {
         let subtitle = NSTextField(
-            wrappingLabelWithString: "Create prompts and select the active one from the Jogen menu."
+            wrappingLabelWithString: "Create prompts and select the active one from the Heelp menu."
         )
         subtitle.textColor = .secondaryLabelColor
 

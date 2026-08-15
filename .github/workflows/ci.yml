@@ -23,12 +23,12 @@ jobs:
 
       - name: Verify bundle
         run: |
-          test -x Jogen.app/Contents/MacOS/Jogen
-          plutil -lint Jogen.app/Contents/Info.plist
-          codesign --verify --verbose Jogen.app
+          test -x Heelp.app/Contents/MacOS/Heelp
+          plutil -lint Heelp.app/Contents/Info.plist
+          codesign --verify --verbose Heelp.app
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Jogen.app
-          path: Jogen.app
+          name: Heelp.app
+          path: Heelp.app

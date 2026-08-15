@@ -31,7 +31,7 @@ final class SettingsWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "Jogen Settings"
+        window.title = "Heelp Settings"
         window.isReleasedWhenClosed = false
         window.center()
         super.init(window: window)
@@ -88,7 +88,7 @@ final class SettingsWindowController: NSWindowController {
         let content = NSView()
 
         let subtitle = NSTextField(
-            wrappingLabelWithString: "Select text in any app, then click the Jogen button nearby to review it."
+            wrappingLabelWithString: "Select text in any app, then click the Heelp button nearby to review it."
         )
         subtitle.textColor = .secondaryLabelColor
 
@@ -251,7 +251,7 @@ final class SettingsWindowController: NSWindowController {
     private func showAlert(message: String) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Could not save Jogen settings"
+        alert.messageText = "Could not save Heelp settings"
         alert.informativeText = message
         alert.beginSheetModal(for: window!)
     }
