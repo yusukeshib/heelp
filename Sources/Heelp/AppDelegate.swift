@@ -42,7 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         setupMainMenu()
         setupStatusItem()
-        requestAccessibilityOnFirstLaunch()
+        requestAccessibilityIfNeeded()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -138,12 +138,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    private func requestAccessibilityOnFirstLaunch() {
+    private func requestAccessibilityIfNeeded() {
         guard !AccessibilityTextMonitor.isTrusted else { return }
-        let defaults = UserDefaults.standard
-        let key = "didRequestAccessibility"
-        guard !defaults.bool(forKey: key) else { return }
-        defaults.set(true, forKey: key)
         AccessibilityTextMonitor.requestAccess()
     }
 
