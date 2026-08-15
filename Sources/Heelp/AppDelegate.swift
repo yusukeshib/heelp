@@ -49,15 +49,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func setupMainMenu() {
         let mainMenu = NSMenu()
-        let editMenuItem = NSMenuItem()
+        let editMenuItem = NSMenuItem(title: "Edit", action: nil, keyEquivalent: "")
         let editMenu = NSMenu(title: "Edit")
+
         editMenu.addItem(
-            NSMenuItem(
-                title: "Paste",
-                action: #selector(NSText.paste(_:)),
-                keyEquivalent: "v"
-            )
+            NSMenuItem(title: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
         )
+        editMenu.addItem(
+            NSMenuItem(title: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        )
+        editMenu.addItem(.separator())
+        editMenu.addItem(
+            NSMenuItem(title: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        )
+        editMenu.addItem(
+            NSMenuItem(title: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        )
+        editMenu.addItem(
+            NSMenuItem(title: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        )
+        editMenu.addItem(.separator())
+        editMenu.addItem(
+            NSMenuItem(title: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        )
+
         editMenuItem.submenu = editMenu
         mainMenu.addItem(editMenuItem)
         NSApp.mainMenu = mainMenu

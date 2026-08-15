@@ -50,6 +50,7 @@ private enum ReviewPrompt {
     The feedback value must contain explanation only. Do not include complete replacement sentences, a suggestion list, or labels such as "Suggestion" in feedback.
     The feedback value may use only this limited Markdown: **bold** for short section labels, *emphasis* sparingly, `inline code` for identifiers or quoted source text, and lines beginning with "- " for lists. When covering multiple categories, use bold section labels to make the feedback easy to scan. Do not use Markdown headings, links, blockquotes, tables, fenced code blocks, HTML, or any other Markdown syntax.
     The suggestion value must contain exactly one complete replacement for all selected text, with no label, explanation, or Markdown. If several rewrites are possible, choose the best one.
+    When the review instructions request a direct transformation such as translation or summarization, leave feedback empty and put only the transformed text in suggestion.
     Set show to true when the selected text is writing that should be reviewed, including when it has no problems.
     For correct writing, set show to true, briefly confirm that there are no issues in the user's requested language, and leave suggestion empty.
     Set show to false only when the selection is not reviewable writing or the user's instructions explicitly exclude it; then return empty strings for feedback and suggestion.
