@@ -5,6 +5,10 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
     var onSave: (() -> Void)?
     var onCancel: (() -> Void)?
 
+    private static let promptRowPasteboardType = NSPasteboard.PasteboardType(
+        "dev.yusukeshib.heelp.prompt-row"
+    )
+
     private let settings: AppSettings
     private let tableView = NSTableView()
     private let nameField = NSTextField()
@@ -38,7 +42,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
 
     private func buildUI(in content: NSView) {
         let subtitle = NSTextField(
-            wrappingLabelWithString: "Create prompts and select the active one from the Heelp menu."
+            wrappingLabelWithString: "Create prompts, drag to reorder them, and select the active one from the Heelp menu."
         )
         subtitle.textColor = .secondaryLabelColor
 
@@ -50,6 +54,8 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
         tableView.delegate = self
         tableView.allowsEmptySelection = false
         tableView.usesAlternatingRowBackgroundColors = true
+        tableView.registerForDraggedTypes([Self.promptRowPasteboardType])
+        tableView.setDraggingSourceOperationMask(.move, forLocal: true)
 
         let tableScroll = NSScrollView()
         tableScroll.borderType = .bezelBorder
@@ -178,6 +184,53 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
         }
         cell.textField?.stringValue = drafts[row].name
         return cell
+    }
+
+    func tableView(_ tableView: NSTableView, pasteboardWriterForRow row: Int) -> NSPasteboardWriting? {
+        guard drafts.indices.contains(row) else { return nil }
+        let item = NSPasteboardItem()
+        item.setString(String(row), forType: Self.promptRowPasteboardType)
+        return item
+    }
+
+    func tableView(
+        _ tableView: NSTableView,
+        validateDrop info: NSDraggingInfo,
+        proposedRow row: Int,
+        proposedDropOperation dropOperation: NSTableView.DropOperation
+    ) -> NSDragOperation {
+        guard let source = info.draggingSource as? NSTableView,
+              source === tableView,
+              info.draggingPasteboard.string(forType: Self.promptRowPasteboardType) != nil
+        else { return [] }
+        tableView.setDropRow(row, dropOperation: .above)
+        return .move
+    }
+
+    func tableView(
+        _ tableView: NSTableView,
+        acceptDrop info: NSDraggingInfo,
+        row: Int,
+        dropOperation: NSTableView.DropOperation
+    ) -> Bool {
+        guard let value = info.draggingPasteboard.string(forType: Self.promptRowPasteboardType),
+              let sourceRow = Int(value),
+              drafts.indices.contains(sourceRow),
+              (0...drafts.count).contains(row)
+        else { return false }
+
+        let destinationRow = sourceRow < row ? row - 1 : row
+        guard destinationRow != sourceRow else { return false }
+
+        captureDisplayedDraft()
+        let profile = drafts.remove(at: sourceRow)
+        drafts.insert(profile, at: destinationRow)
+        displayedID = nil
+        tableView.reloadData()
+        if let movedRow = drafts.firstIndex(where: { $0.id == profile.id }) {
+            selectDraft(at: movedRow)
+        }
+        return true
     }
 
     func tableViewSelectionDidChange(_ notification: Notification) {
