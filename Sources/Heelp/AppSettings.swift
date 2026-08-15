@@ -6,6 +6,8 @@ final class AppSettings {
 
     static let defaultThinkingLevel = "none"
 
+    private static let legacyDefaultsSuite = "com.yusukeshibata.jogen"
+
     private static let defaultPrompt = """
     選択された文章を確認し、文法上の間違いを指摘してください。
     より自然な表現があれば提案してください。
@@ -37,6 +39,27 @@ final class AppSettings {
     ) {
         self.defaults = defaults
         self.runtimeOptions = runtimeOptions
+        migrateLegacySettingsIfNeeded()
+    }
+
+    private func migrateLegacySettingsIfNeeded() {
+        guard let legacy = UserDefaults(suiteName: Self.legacyDefaultsSuite) else { return }
+
+        let providerKeys = AIProvider.allCases.flatMap { provider in
+            [modelKey(for: provider), thinkingLevelKey(for: provider)]
+        }
+        for key in [Key.provider] + providerKeys where defaults.object(forKey: key) == nil {
+            guard let value = legacy.object(forKey: key) else { continue }
+            defaults.set(value, forKey: key)
+        }
+
+        if defaults.data(forKey: Key.promptProfiles) == nil,
+           let profiles = legacy.data(forKey: Key.promptProfiles) {
+            defaults.set(profiles, forKey: Key.promptProfiles)
+            if let selectedPromptID = legacy.string(forKey: Key.selectedPromptID) {
+                defaults.set(selectedPromptID, forKey: Key.selectedPromptID)
+            }
+        }
     }
 
     var provider: AIProvider {

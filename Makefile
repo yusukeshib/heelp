@@ -3,6 +3,8 @@ BIN = .build/release/Heelp
 # Keep a stable signature so Accessibility permission survives local rebuilds.
 # Distribution builds override this with a Developer ID Application identity.
 SIGN_IDENTITY ?= Apple Development: Yusuke Shibata (6F8N535B8W)
+BUNDLE_IDENTIFIER ?= dev.yusukeshib.heelp.dev
+BUNDLE_NAME ?= Heelp Dev
 # Distribution builds enable Hardened Runtime and a secure timestamp.
 CODESIGN_FLAGS ?=
 RUN_ARGS ?=
@@ -18,6 +20,8 @@ bundle: build
 	rm -rf $(APP)
 	mkdir -p $(APP)/Contents/MacOS
 	cp Info.plist $(APP)/Contents/
+	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $(BUNDLE_IDENTIFIER)" $(APP)/Contents/Info.plist
+	/usr/libexec/PlistBuddy -c "Set :CFBundleName $(BUNDLE_NAME)" $(APP)/Contents/Info.plist
 	cp $(BIN) $(APP)/Contents/MacOS/
 	codesign --force $(CODESIGN_FLAGS) --sign "$(SIGN_IDENTITY)" $(APP)
 

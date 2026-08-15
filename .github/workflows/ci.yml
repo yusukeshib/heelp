@@ -19,7 +19,11 @@ jobs:
         run: swift build -c release
 
       - name: Bundle (ad-hoc signed)
-        run: make bundle SIGN_IDENTITY=-
+        run: >-
+          make bundle
+          SIGN_IDENTITY=-
+          BUNDLE_IDENTIFIER=dev.yusukeshib.heelp
+          BUNDLE_NAME=Heelp
 
       - name: Verify bundle
         run: |

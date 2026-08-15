@@ -23,6 +23,8 @@ fi
 echo "▸ Signing identity: $SIGN_IDENTITY"
 make bundle \
   SIGN_IDENTITY="$SIGN_IDENTITY" \
+  BUNDLE_IDENTIFIER="dev.yusukeshib.heelp" \
+  BUNDLE_NAME="Heelp" \
   CODESIGN_FLAGS="--options runtime --timestamp"
 
 printf '▸ Verifying signature…\n'

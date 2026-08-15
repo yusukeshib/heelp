@@ -11,6 +11,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let settings = AppSettings.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        KeychainStore.migrateLegacyAPIKeysIfNeeded()
+
         let suggestionPanel = SuggestionPanel()
         let triggerPanel = SelectionTriggerPanel()
         coordinator = ReviewCoordinator(
