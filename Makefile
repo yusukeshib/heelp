@@ -18,11 +18,12 @@ build:
 
 bundle: build
 	rm -rf $(APP)
-	mkdir -p $(APP)/Contents/MacOS
+	mkdir -p $(APP)/Contents/MacOS $(APP)/Contents/Resources
 	cp Info.plist $(APP)/Contents/
 	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $(BUNDLE_IDENTIFIER)" $(APP)/Contents/Info.plist
 	/usr/libexec/PlistBuddy -c "Set :CFBundleName $(BUNDLE_NAME)" $(APP)/Contents/Info.plist
 	cp $(BIN) $(APP)/Contents/MacOS/
+	cp Assets/Heelp.icns $(APP)/Contents/Resources/
 	codesign --force $(CODESIGN_FLAGS) --sign "$(SIGN_IDENTITY)" $(APP)
 
 run: bundle
