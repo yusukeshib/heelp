@@ -120,10 +120,11 @@ private struct OpenAICompatibleClient {
             makeRequest: {
                 let body = OpenAIChatRequest(
                     model: model,
-                    maxTokens: provider.usesMaxCompletionTokens ? 2000 : 500,
+                    maxTokens: provider.maxOutputTokens,
                     usesMaxCompletionTokens: provider.usesMaxCompletionTokens,
                     reasoningEffort: thinkingLevel,
                     usesNestedReasoning: provider.usesNestedReasoningParameter,
+                    requiresSupportedParameters: provider == .openRouter,
                     messages: [
                         .init(role: "system", content: system),
                         .init(role: "user", content: user)
@@ -338,6 +339,7 @@ private struct OpenAIChatRequest: Encodable {
     let usesMaxCompletionTokens: Bool
     let reasoningEffort: String?
     let usesNestedReasoning: Bool
+    let requiresSupportedParameters: Bool
     let messages: [Message]
 
     enum CodingKeys: String, CodingKey {
@@ -346,12 +348,26 @@ private struct OpenAIChatRequest: Encodable {
         case maxCompletionTokens = "max_completion_tokens"
         case reasoningEffort = "reasoning_effort"
         case reasoning
+        case responseFormat = "response_format"
+        case provider
         case messages
         case stream
     }
 
     struct Reasoning: Encodable {
         let effort: String
+    }
+
+    struct ResponseFormat: Encodable {
+        let type = "json_object"
+    }
+
+    struct ProviderPreferences: Encodable {
+        let requireParameters = true
+
+        enum CodingKeys: String, CodingKey {
+            case requireParameters = "require_parameters"
+        }
     }
 
     func encode(to encoder: Encoder) throws {
@@ -367,6 +383,10 @@ private struct OpenAIChatRequest: Encodable {
             } else {
                 try container.encode(reasoningEffort, forKey: .reasoningEffort)
             }
+        }
+        try container.encode(ResponseFormat(), forKey: .responseFormat)
+        if requiresSupportedParameters {
+            try container.encode(ProviderPreferences(), forKey: .provider)
         }
         try container.encode(messages, forKey: .messages)
         try container.encode(true, forKey: .stream)

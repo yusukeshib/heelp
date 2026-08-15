@@ -38,6 +38,17 @@ enum AIProvider: String, CaseIterable, Codable, Hashable {
         }
     }
 
+    /// Reasoning models need room for both internal reasoning and visible output.
+    /// A higher limit is also important for direct transformations such as translation.
+    var maxOutputTokens: Int {
+        switch self {
+        case .openAI, .openRouter:
+            return 2_000
+        case .anthropic:
+            return 500
+        }
+    }
+
     /// Newer OpenAI models reject `max_tokens` and require `max_completion_tokens`.
     /// OpenRouter normalizes `max_tokens` across all upstream models.
     var usesMaxCompletionTokens: Bool {
