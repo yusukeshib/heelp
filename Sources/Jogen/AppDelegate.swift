@@ -8,7 +8,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var monitor: AccessibilityTextMonitor!
     private var coordinator: ReviewCoordinator!
     private var settingsWindow: SettingsWindowController!
-    private var promptManagerWindow: PromptManagerWindowController!
     private let settings = AppSettings.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -36,10 +35,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         settingsWindow.onSave = { [weak self] in
             self?.coordinator.reset()
             self?.monitor.refresh()
-        }
-        promptManagerWindow = PromptManagerWindowController(settings: settings)
-        promptManagerWindow.onSave = { [weak self] in
-            self?.coordinator.reset()
             self?.rebuildStatusMenu()
         }
 
@@ -95,9 +90,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(item)
         }
 
-        let manageItem = NSMenuItem(title: "Manage Prompts…", action: #selector(showPromptManager), keyEquivalent: "")
-        manageItem.target = self
-        menu.addItem(manageItem)
         menu.addItem(.separator())
 
         accessibilityItem = NSMenuItem(
@@ -108,7 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         accessibilityItem.target = self
         menu.addItem(accessibilityItem)
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit Jogen", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem.menu = menu
     }
 
@@ -141,11 +133,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func showSettings() {
         coordinator.dismiss()
         settingsWindow.present()
-    }
-
-    @objc private func showPromptManager() {
-        coordinator.dismiss()
-        promptManagerWindow.present()
     }
 
     @objc private func selectPrompt(_ sender: NSMenuItem) {

@@ -7,21 +7,26 @@ final class SettingsWindowController: NSWindowController {
     private struct ProviderDraft {
         var apiKey: String
         var model: String
+        var thinkingLevel: String
     }
 
     private let settings: AppSettings
+    private let promptSettings: PromptSettingsViewController
     private let providerPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
     private let apiKeyLabel = NSTextField(labelWithString: "API key")
     private let apiKeyField = NSSecureTextField()
     private let modelField = NSTextField()
+    private let thinkingLevelLabel = NSTextField(labelWithString: "Thinking level (empty to omit)")
+    private let thinkingLevelField = NSTextField()
     private var displayedProvider: AIProvider = .anthropic
     private var drafts: [AIProvider: ProviderDraft] = [:]
 
     init(settings: AppSettings) {
         self.settings = settings
+        promptSettings = PromptSettingsViewController(settings: settings)
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 580, height: 365),
+            contentRect: NSRect(x: 0, y: 0, width: 700, height: 500),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -30,6 +35,14 @@ final class SettingsWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.center()
         super.init(window: window)
+
+        promptSettings.onSave = { [weak self] in
+            self?.onSave?()
+            self?.window?.orderOut(nil)
+        }
+        promptSettings.onCancel = { [weak self] in
+            self?.window?.orderOut(nil)
+        }
 
         buildUI(in: window)
         loadValues()
@@ -41,6 +54,7 @@ final class SettingsWindowController: NSWindowController {
 
     func present() {
         loadValues()
+        promptSettings.loadValues()
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }
@@ -48,10 +62,34 @@ final class SettingsWindowController: NSWindowController {
     private func buildUI(in window: NSWindow) {
         guard let content = window.contentView else { return }
 
-        let title = NSTextField(labelWithString: "Jogen Settings")
-        title.font = .systemFont(ofSize: 20, weight: .semibold)
+        let tabView = NSTabView()
+        tabView.translatesAutoresizingMaskIntoConstraints = false
 
-        let subtitle = NSTextField(wrappingLabelWithString: "Select text in any app, then click the Jogen button nearby to review it.")
+        let generalItem = NSTabViewItem(identifier: "general")
+        generalItem.label = "General"
+        generalItem.view = makeGeneralView()
+        tabView.addTabViewItem(generalItem)
+
+        let promptsItem = NSTabViewItem(identifier: "prompts")
+        promptsItem.label = "Prompts"
+        promptsItem.view = promptSettings.view
+        tabView.addTabViewItem(promptsItem)
+
+        content.addSubview(tabView)
+        NSLayoutConstraint.activate([
+            tabView.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16),
+            tabView.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16),
+            tabView.topAnchor.constraint(equalTo: content.topAnchor, constant: 16),
+            tabView.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -16)
+        ])
+    }
+
+    private func makeGeneralView() -> NSView {
+        let content = NSView()
+
+        let subtitle = NSTextField(
+            wrappingLabelWithString: "Select text in any app, then click the Jogen button nearby to review it."
+        )
         subtitle.textColor = .secondaryLabelColor
 
         providerPopUp.addItems(withTitles: AIProvider.allCases.map(\.displayName))
@@ -59,7 +97,9 @@ final class SettingsWindowController: NSWindowController {
         providerPopUp.action = #selector(providerChanged(_:))
 
         styleLabel(apiKeyLabel)
+        styleLabel(thinkingLevelLabel)
         modelField.placeholderString = "Model ID"
+        thinkingLevelField.placeholderString = "none"
 
         let saveButton = NSButton(title: "Save", target: self, action: #selector(save))
         saveButton.keyEquivalent = "\r"
@@ -71,7 +111,6 @@ final class SettingsWindowController: NSWindowController {
         buttonRow.addArrangedSubview(saveButton)
 
         let stack = NSStackView(views: [
-            title,
             subtitle,
             label("Provider"),
             providerPopUp,
@@ -79,6 +118,8 @@ final class SettingsWindowController: NSWindowController {
             apiKeyField,
             label("Model ID"),
             modelField,
+            thinkingLevelLabel,
+            thinkingLevelField,
             buttonRow
         ])
         stack.orientation = .vertical
@@ -88,16 +129,19 @@ final class SettingsWindowController: NSWindowController {
         content.addSubview(stack)
 
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 22),
-            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -22),
-            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -18),
+            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16),
+            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 16),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -16),
             subtitle.widthAnchor.constraint(equalTo: stack.widthAnchor),
             providerPopUp.widthAnchor.constraint(equalTo: stack.widthAnchor),
             apiKeyField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             modelField.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            thinkingLevelField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             buttonRow.widthAnchor.constraint(equalTo: stack.widthAnchor)
         ])
+
+        return content
     }
 
     private func label(_ value: String) -> NSTextField {
@@ -116,14 +160,14 @@ final class SettingsWindowController: NSWindowController {
                 provider,
                 ProviderDraft(
                     apiKey: KeychainStore.apiKey(for: provider),
-                    model: settings.model(for: provider)
+                    model: settings.model(for: provider),
+                    thinkingLevel: settings.thinkingLevel(for: provider)
                 )
             )
         })
         displayedProvider = settings.provider
         providerPopUp.selectItem(withTitle: displayedProvider.displayName)
         showDraft(for: displayedProvider)
-
     }
 
     @objc private func providerChanged(_ sender: NSPopUpButton) {
@@ -142,23 +186,35 @@ final class SettingsWindowController: NSWindowController {
     private func captureDisplayedDraft() {
         drafts[displayedProvider] = ProviderDraft(
             apiKey: apiKeyField.stringValue,
-            model: modelField.stringValue
+            model: modelField.stringValue,
+            thinkingLevel: thinkingLevelField.stringValue
         )
     }
 
     private func showDraft(for provider: AIProvider) {
-        let draft = drafts[provider] ?? ProviderDraft(apiKey: "", model: provider.defaultModel)
+        let draft = drafts[provider] ?? ProviderDraft(
+            apiKey: "",
+            model: provider.defaultModel,
+            thinkingLevel: AppSettings.defaultThinkingLevel
+        )
         apiKeyLabel.stringValue = "\(provider.displayName) API key"
         apiKeyField.placeholderString = provider.apiKeyPlaceholder
         apiKeyField.stringValue = draft.apiKey
         modelField.placeholderString = provider.defaultModel
         modelField.stringValue = draft.model
+        thinkingLevelField.stringValue = draft.thinkingLevel
+        thinkingLevelLabel.isHidden = !provider.supportsThinkingLevel
+        thinkingLevelField.isHidden = !provider.supportsThinkingLevel
     }
 
     @objc private func save() {
         captureDisplayedDraft()
         let provider = selectedProvider
-        let draft = drafts[provider] ?? ProviderDraft(apiKey: "", model: provider.defaultModel)
+        let draft = drafts[provider] ?? ProviderDraft(
+            apiKey: "",
+            model: provider.defaultModel,
+            thinkingLevel: AppSettings.defaultThinkingLevel
+        )
         let model = draft.model.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !model.isEmpty else {
             showAlert(message: "Model ID cannot be empty.")
@@ -179,6 +235,10 @@ final class SettingsWindowController: NSWindowController {
                     for: configuredProvider
                 )
                 settings.setModel(configuredModel, for: configuredProvider)
+                settings.setThinkingLevel(
+                    configuredDraft.thinkingLevel.trimmingCharacters(in: .whitespacesAndNewlines),
+                    for: configuredProvider
+                )
             }
             settings.provider = provider
             onSave?()

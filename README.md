@@ -23,7 +23,7 @@ Jogen is a macOS menu bar writing coach. Select text in another app, then click 
 
 Download [**Jogen.dmg**](https://github.com/yusukeshib/jogen/releases/latest/download/Jogen.dmg), open it, and drag Jogen to Applications. Jogen requires macOS 13 or later.
 
-On first launch, grant Jogen Accessibility access. Open **Jogen → Settings…** from the menu bar, choose Anthropic, OpenAI, or OpenRouter, enter its API key, and adjust the model if needed. Select an active prompt directly from the Jogen menu, or use **Manage Prompts…** to add and edit prompts. Then select text in Chrome, Slack, TextEdit, or another app and click the Jogen button that appears nearby.
+On first launch, grant Jogen Accessibility access. Open **Jogen → Settings…** from the menu bar, choose Anthropic, OpenAI, or OpenRouter, enter its API key, and adjust the model if needed. For OpenAI and OpenRouter, the thinking level defaults to `none`; set a value supported by the selected model, or leave it empty to omit the parameter. Select an active prompt directly from the Jogen menu, or use the **Prompts** tab in **Settings…** to add and edit prompts. Then select text in Chrome, Slack, TextEdit, or another app and click the Jogen button that appears nearby.
 
 ## Development
 

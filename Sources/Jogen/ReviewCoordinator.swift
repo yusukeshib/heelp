@@ -146,6 +146,11 @@ final class ReviewCoordinator {
 
         let provider = settings.provider
         let model = settings.model
+        let configuredThinkingLevel = settings.thinkingLevel
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let thinkingLevel = provider.supportsThinkingLevel && !configuredThinkingLevel.isEmpty
+            ? configuredThinkingLevel
+            : nil
         let prompt = promptProfile.prompt
         let heading = promptProfile.name
         let apiKey = KeychainStore.apiKey(for: provider)
@@ -162,7 +167,7 @@ final class ReviewCoordinator {
             return
         }
 
-        let requestKey = [provider.rawValue, model, prompt, text]
+        let requestKey = [provider.rawValue, model, thinkingLevel ?? "", prompt, text]
             .joined(separator: "\u{1F}")
         guard requestKey != lastRequestKey else { return }
         lastRequestKey = requestKey
@@ -183,6 +188,7 @@ final class ReviewCoordinator {
                 prompt: prompt,
                 provider: provider,
                 model: model,
+                thinkingLevel: thinkingLevel,
                 apiKey: apiKey
             )
             var lastFrame = Date.distantPast

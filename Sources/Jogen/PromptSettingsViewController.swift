@@ -1,8 +1,9 @@
 import AppKit
 
 @MainActor
-final class PromptManagerWindowController: NSWindowController, NSTableViewDataSource, NSTableViewDelegate {
+final class PromptSettingsViewController: NSViewController, NSTableViewDataSource, NSTableViewDelegate {
     var onSave: (() -> Void)?
+    var onCancel: (() -> Void)?
 
     private let settings: AppSettings
     private let tableView = NSTableView()
@@ -14,38 +15,31 @@ final class PromptManagerWindowController: NSWindowController, NSTableViewDataSo
 
     init(settings: AppSettings) {
         self.settings = settings
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 700, height: 500),
-            styleMask: [.titled, .closable, .miniaturizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Manage Prompts"
-        window.isReleasedWhenClosed = false
-        window.center()
-        super.init(window: window)
-        buildUI(in: window)
+        super.init(nibName: nil, bundle: nil)
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func present() {
+    override func loadView() {
+        let content = NSView()
+        view = content
+        buildUI(in: content)
+    }
+
+    func loadValues() {
+        displayedID = nil
         drafts = settings.promptProfiles
         tableView.reloadData()
         let selectedIndex = drafts.firstIndex(where: { $0.id == settings.selectedPromptID }) ?? 0
         selectDraft(at: selectedIndex)
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
     }
 
-    private func buildUI(in window: NSWindow) {
-        guard let content = window.contentView else { return }
-
-        let title = NSTextField(labelWithString: "Manage Prompts")
-        title.font = .systemFont(ofSize: 20, weight: .semibold)
-        let subtitle = NSTextField(wrappingLabelWithString: "Create prompts and select the active one from the Jogen menu.")
+    private func buildUI(in content: NSView) {
+        let subtitle = NSTextField(
+            wrappingLabelWithString: "Create prompts and select the active one from the Jogen menu."
+        )
         subtitle.textColor = .secondaryLabelColor
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("PromptName"))
@@ -134,7 +128,7 @@ final class PromptManagerWindowController: NSWindowController, NSTableViewDataSo
         panes.distribution = .fill
         panes.translatesAutoresizingMaskIntoConstraints = false
 
-        let stack = NSStackView(views: [title, subtitle, panes])
+        let stack = NSStackView(views: [subtitle, panes])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
@@ -142,10 +136,10 @@ final class PromptManagerWindowController: NSWindowController, NSTableViewDataSo
         content.addSubview(stack)
 
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 22),
-            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -22),
-            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
-            stack.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -18),
+            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16),
+            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 16),
+            stack.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -16),
             subtitle.widthAnchor.constraint(equalTo: stack.widthAnchor),
             panes.widthAnchor.constraint(equalTo: stack.widthAnchor),
             panes.bottomAnchor.constraint(equalTo: stack.bottomAnchor),
@@ -235,7 +229,7 @@ final class PromptManagerWindowController: NSWindowController, NSTableViewDataSo
     }
 
     @objc private func cancel() {
-        window?.orderOut(nil)
+        onCancel?()
     }
 
     @objc private func update() {
@@ -250,7 +244,6 @@ final class PromptManagerWindowController: NSWindowController, NSTableViewDataSo
         }
         settings.promptProfiles = drafts
         onSave?()
-        window?.orderOut(nil)
     }
 
     private func showAlert(message: String) {
@@ -258,6 +251,7 @@ final class PromptManagerWindowController: NSWindowController, NSTableViewDataSo
         alert.alertStyle = .warning
         alert.messageText = "Could not update prompts"
         alert.informativeText = message
-        alert.beginSheetModal(for: window!)
+        guard let window = view.window else { return }
+        alert.beginSheetModal(for: window)
     }
 }

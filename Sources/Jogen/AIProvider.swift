@@ -49,6 +49,15 @@ enum AIProvider: String, CaseIterable, Codable, Hashable {
         }
     }
 
+    var supportsThinkingLevel: Bool {
+        switch self {
+        case .openAI, .openRouter:
+            return true
+        case .anthropic:
+            return false
+        }
+    }
+
     /// OpenAI takes a flat `reasoning_effort`; OpenRouter normalizes the same
     /// control under a nested `reasoning` object.
     var usesNestedReasoningParameter: Bool {

@@ -10,6 +10,7 @@ struct ReviewClient {
         prompt: String,
         provider: AIProvider,
         model: String,
+        thinkingLevel: String?,
         apiKey: String
     ) -> AsyncThrowingStream<ReviewStreamEvent, Error> {
         let system = ReviewPrompt.system
@@ -33,6 +34,7 @@ struct ReviewClient {
                 user: user,
                 provider: provider,
                 model: model,
+                thinkingLevel: thinkingLevel,
                 apiKey: apiKey
             )
         }
@@ -108,6 +110,7 @@ private struct OpenAICompatibleClient {
         user: String,
         provider: AIProvider,
         model: String,
+        thinkingLevel: String?,
         apiKey: String
     ) -> AsyncThrowingStream<ReviewStreamEvent, Error> {
         streamReview(
@@ -118,7 +121,7 @@ private struct OpenAICompatibleClient {
                     model: model,
                     maxTokens: provider.usesMaxCompletionTokens ? 2000 : 500,
                     usesMaxCompletionTokens: provider.usesMaxCompletionTokens,
-                    reasoningEffort: ReasoningEffort.fastest(forModel: model, provider: provider),
+                    reasoningEffort: thinkingLevel,
                     usesNestedReasoning: provider.usesNestedReasoningParameter,
                     messages: [
                         .init(role: "system", content: system),
@@ -325,32 +328,6 @@ private struct AnthropicStreamEvent: Decodable {
 
     struct ErrorBody: Decodable {
         let message: String?
-    }
-}
-
-/// Reasoning models burn hidden tokens before emitting any visible output, which
-/// dominates latency for Jogen's short, interactive reviews. Requesting the
-/// cheapest effort each family accepts keeps responses fast.
-///
-/// The parameter must only be sent to models that support it: non-reasoning
-/// models such as `gpt-4.1-mini` reject it outright. Accepted values also differ
-/// by generation — `gpt-5` exposes `minimal`, while `gpt-5.1` and newer replaced
-/// it with `none`, and the o-series bottoms out at `low`.
-private enum ReasoningEffort {
-    static func fastest(forModel model: String, provider: AIProvider) -> String? {
-        // OpenRouter model IDs are vendor-qualified, e.g. `openai/gpt-5.6`.
-        let id = model.lowercased().split(separator: "/").last.map(String.init) ?? ""
-
-        if id == "gpt-5" || id.hasPrefix("gpt-5-") {
-            return "minimal"
-        }
-        if id.hasPrefix("gpt-5") {
-            return "none"
-        }
-        if id.hasPrefix("o1") || id.hasPrefix("o3") || id.hasPrefix("o4") {
-            return "low"
-        }
-        return nil
     }
 }
 
