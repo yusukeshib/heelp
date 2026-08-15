@@ -21,7 +21,7 @@ enum AIProvider: String, CaseIterable, Codable, Hashable {
         case .anthropic:
             return "claude-haiku-4-5-20251001"
         case .openAI:
-            return "gpt-4.1-mini"
+            return "gpt-5.6-luna"
         case .openRouter:
             return "anthropic/claude-haiku-4.5"
         }
