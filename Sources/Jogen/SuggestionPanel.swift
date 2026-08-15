@@ -298,14 +298,14 @@ final class SuggestionPanel: NSPanel {
         let isDark = effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
         bodyScrollView.verticalScroller?.knobStyle = isDark ? .light : .dark
 
-        bodyStack.setFrameSize(NSSize(width: 352, height: 18))
+        // Preserve the origin before resizing, and never collapse the document
+        // view just to measure it: doing so clamps an in-progress scroll to the top.
+        let preservedScrollOrigin = resetScroll ? nil : bodyScrollView.contentView.bounds.origin
         bodyStack.layoutSubtreeIfNeeded()
         let bodyHeight = max(bodyStack.fittingSize.height, 18)
         bodyStack.setFrameSize(NSSize(width: 352, height: bodyHeight))
         bodyHeightConstraint.constant = min(bodyHeight, 400)
-        if resetScroll {
-            bodyScrollView.contentView.scroll(to: .zero)
-        }
+        bodyScrollView.contentView.scroll(to: preservedScrollOrigin ?? .zero)
         bodyScrollView.reflectScrolledClipView(bodyScrollView.contentView)
 
         contentView?.layoutSubtreeIfNeeded()
