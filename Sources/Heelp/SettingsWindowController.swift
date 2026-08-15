@@ -75,6 +75,11 @@ final class SettingsWindowController: NSWindowController {
         promptsItem.view = promptSettings.view
         tabView.addTabViewItem(promptsItem)
 
+        let systemPromptItem = NSTabViewItem(identifier: "systemPrompt")
+        systemPromptItem.label = "System Prompt"
+        systemPromptItem.view = makeSystemPromptView()
+        tabView.addTabViewItem(systemPromptItem)
+
         content.addSubview(tabView)
         NSLayoutConstraint.activate([
             tabView.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16),
@@ -139,6 +144,48 @@ final class SettingsWindowController: NSWindowController {
             modelField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             thinkingLevelField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             buttonRow.widthAnchor.constraint(equalTo: stack.widthAnchor)
+        ])
+
+        return content
+    }
+
+    private func makeSystemPromptView() -> NSView {
+        let content = NSView()
+
+        let subtitle = NSTextField(
+            wrappingLabelWithString: "This read-only prompt is sent with every review request."
+        )
+        subtitle.textColor = .secondaryLabelColor
+        subtitle.translatesAutoresizingMaskIntoConstraints = false
+
+        let textView = NSTextView()
+        textView.string = ReviewPrompt.system
+        textView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.isRichText = false
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
+        textView.textContainer?.widthTracksTextView = true
+        textView.textContainerInset = NSSize(width: 8, height: 8)
+
+        let scrollView = NSScrollView()
+        scrollView.borderType = .bezelBorder
+        scrollView.hasVerticalScroller = true
+        scrollView.documentView = textView
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+
+        content.addSubview(subtitle)
+        content.addSubview(scrollView)
+        NSLayoutConstraint.activate([
+            subtitle.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16),
+            subtitle.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16),
+            subtitle.topAnchor.constraint(equalTo: content.topAnchor, constant: 16),
+            scrollView.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16),
+            scrollView.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16),
+            scrollView.topAnchor.constraint(equalTo: subtitle.bottomAnchor, constant: 12),
+            scrollView.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -16)
         ])
 
         return content
