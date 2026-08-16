@@ -1,9 +1,9 @@
 import Foundation
 
 enum AIProvider: String, CaseIterable, Codable, Hashable {
-    case anthropic
-    case openAI = "openai"
     case openRouter = "openrouter"
+    case openAI = "openai"
+    case anthropic
 
     var displayName: String {
         switch self {

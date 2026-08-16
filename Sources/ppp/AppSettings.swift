@@ -7,17 +7,17 @@ final class AppSettings {
     static let defaultThinkingLevel = "none"
 
     private static let defaultPrompt = """
-    選択された文章を確認し、文法上の間違いを指摘してください。
-    より自然な表現があれば提案してください。
-    説明と助言は日本語で、簡潔に表示してください。
-    文章を確認して問題がない場合は、そのことを短く表示してください。
-    選択内容が文章ではないなど、添削対象でない場合だけ何も表示しないでください。
+    Review the selected text and identify any grammatical errors.
+    Suggest more natural phrasing where appropriate.
+    Provide concise explanations and advice.
+    If the text has no issues, state that briefly.
+    Show nothing only when the selection is not suitable for proofreading, such as when it is not prose.
     """
 
-    private static let summarizePrompt = """
-    選択された文章を日本語で簡潔に要約してください。
-    重要な情報と結論を優先し、元の意味を変えないでください。
-    説明や前置きは付けず、feedbackは空文字列にし、suggestionには要約本文だけを入れてください。
+    private static let translateToSpanishPrompt = """
+    Translate the selected text into Spanish.
+    Preserve the original meaning, tone, and formatting as closely as possible.
+    Do not include explanations or a preamble. Set feedback to an empty string and put only the translated text in suggestion.
     """
 
     private enum Key {
@@ -135,13 +135,13 @@ final class AppSettings {
         [
             PromptProfile(
                 id: UUID(uuidString: "A93C242E-B65B-4DC6-86B1-3992D8F71F53")!,
-                name: "Grammar correction in Japanese",
+                name: "Grammar correction",
                 prompt: defaultPrompt
             ),
             PromptProfile(
                 id: UUID(uuidString: "B80C363B-6C59-40B3-A52B-3505D42CB58E")!,
-                name: "Summarize in Japanese",
-                prompt: summarizePrompt
+                name: "Translate to Spanish",
+                prompt: translateToSpanishPrompt
             )
         ]
     }

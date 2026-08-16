@@ -14,6 +14,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
     private let promptTextView = NSTextView()
     private let deleteButton = NSButton(title: "−", target: nil, action: nil)
     private let revertButton = NSButton(title: "Revert", target: nil, action: nil)
+    private let updateButton = NSButton(title: "Update", target: nil, action: nil)
     private var savedDrafts: [PromptProfile] = []
     private var drafts: [PromptProfile] = []
     private var displayedID: UUID?
@@ -112,7 +113,8 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
         revertButton.target = self
         revertButton.action = #selector(revert)
         revertButton.toolTip = "Discard Unsaved Changes"
-        let updateButton = NSButton(title: "Update", target: self, action: #selector(update))
+        updateButton.target = self
+        updateButton.action = #selector(update)
         updateButton.keyEquivalent = "\r"
         let buttonRow = NSStackView(views: [NSView(), revertButton, updateButton])
         buttonRow.orientation = .horizontal
@@ -348,7 +350,9 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
     }
 
     private func updateRevertButton() {
-        revertButton.isEnabled = drafts != savedDrafts
+        let hasChanges = drafts != savedDrafts
+        revertButton.isEnabled = hasChanges
+        updateButton.isEnabled = hasChanges
     }
 
     private func showAlert(message: String) {
