@@ -135,12 +135,12 @@ final class AppSettings {
         [
             PromptProfile(
                 id: UUID(uuidString: "A93C242E-B65B-4DC6-86B1-3992D8F71F53")!,
-                name: "Grammar correction",
+                name: L10n.string("Grammar correction"),
                 prompt: defaultPrompt
             ),
             PromptProfile(
                 id: UUID(uuidString: "B80C363B-6C59-40B3-A52B-3505D42CB58E")!,
-                name: "Translate to Spanish",
+                name: L10n.string("Translate to Spanish"),
                 prompt: translateToSpanishPrompt
             )
         ]

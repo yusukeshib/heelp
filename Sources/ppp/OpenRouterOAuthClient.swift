@@ -216,7 +216,7 @@ private final class LoopbackCallbackServer: @unchecked Sendable {
                 self.sendResponse(
                     on: connection,
                     status: "413 Payload Too Large",
-                    body: "Invalid callback request."
+                    body: L10n.string("Invalid callback request.")
                 )
                 return
             }
@@ -228,7 +228,7 @@ private final class LoopbackCallbackServer: @unchecked Sendable {
                 self.sendResponse(
                     on: connection,
                     status: "400 Bad Request",
-                    body: "Invalid callback request."
+                    body: L10n.string("Invalid callback request.")
                 )
             } else {
                 self.receiveRequest(on: connection, accumulated: requestData)
@@ -240,7 +240,11 @@ private final class LoopbackCallbackServer: @unchecked Sendable {
         guard let request = String(data: data, encoding: .utf8),
               let requestLine = request.components(separatedBy: "\r\n").first
         else {
-            sendResponse(on: connection, status: "400 Bad Request", body: "Invalid callback request.")
+            sendResponse(
+                on: connection,
+                status: "400 Bad Request",
+                body: L10n.string("Invalid callback request.")
+            )
             return
         }
 
@@ -250,7 +254,11 @@ private final class LoopbackCallbackServer: @unchecked Sendable {
               let components = URLComponents(string: "http://localhost\(parts[1])"),
               components.path == "/callback"
         else {
-            sendResponse(on: connection, status: "404 Not Found", body: "Not found.")
+            sendResponse(
+                on: connection,
+                status: "404 Not Found",
+                body: L10n.string("Not found.")
+            )
             return
         }
 
@@ -259,7 +267,7 @@ private final class LoopbackCallbackServer: @unchecked Sendable {
             sendResponse(
                 on: connection,
                 status: "200 OK",
-                body: "OpenRouter is connected. You can close this window.",
+                body: L10n.string("OpenRouter is connected. You can close this window."),
                 result: .success(code)
             )
             return
@@ -270,13 +278,19 @@ private final class LoopbackCallbackServer: @unchecked Sendable {
             sendResponse(
                 on: connection,
                 status: "400 Bad Request",
-                body: "OpenRouter authorization was not completed. You can close this window.",
+                body: L10n.string(
+                    "OpenRouter authorization was not completed. You can close this window."
+                ),
                 result: .failure(OAuthError.authorizationFailed(description ?? error))
             )
             return
         }
 
-        sendResponse(on: connection, status: "400 Bad Request", body: "Invalid callback request.")
+        sendResponse(
+            on: connection,
+            status: "400 Bad Request",
+            body: L10n.string("Invalid callback request.")
+        )
     }
 
     private func sendResponse(
@@ -328,24 +342,24 @@ private enum OAuthError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .randomGenerationFailed:
-            return "Could not create a secure OpenRouter sign-in request."
+            return L10n.string("Could not create a secure OpenRouter sign-in request.")
         case .invalidAuthorizationURL:
-            return "Could not create the OpenRouter sign-in URL."
+            return L10n.string("Could not create the OpenRouter sign-in URL.")
         case let .callbackServerFailed(message):
-            return "Could not receive the OpenRouter callback: \(message)"
+            return L10n.format("Could not receive the OpenRouter callback: %@", message)
         case .couldNotOpenBrowser:
-            return "Could not open the OpenRouter sign-in page."
+            return L10n.string("Could not open the OpenRouter sign-in page.")
         case .authorizationTimedOut:
-            return "OpenRouter sign-in timed out."
+            return L10n.string("OpenRouter sign-in timed out.")
         case let .authorizationFailed(message):
-            return "OpenRouter authorization failed: \(message)"
+            return L10n.format("OpenRouter authorization failed: %@", message)
         case .invalidTokenResponse:
-            return "OpenRouter returned an invalid sign-in response."
+            return L10n.string("OpenRouter returned an invalid sign-in response.")
         case let .exchangeFailed(status, message):
             if let message, !message.isEmpty {
-                return "OpenRouter sign-in failed (HTTP \(status)): \(message)"
+                return L10n.format("OpenRouter sign-in failed (HTTP %ld): %@", status, message)
             }
-            return "OpenRouter sign-in failed (HTTP \(status))."
+            return L10n.format("OpenRouter sign-in failed (HTTP %ld).", status)
         }
     }
 }

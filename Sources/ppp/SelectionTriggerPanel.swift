@@ -60,7 +60,7 @@ final class SelectionTriggerPanel: NSPanel {
 
     func show(near accessibilityRect: CGRect?, promptName: String) {
         button.title = promptName
-        button.toolTip = "Run \(promptName)"
+        button.toolTip = L10n.format("Run %@", promptName)
         let width = min(max(button.intrinsicContentSize.width + 16, 88), 280)
         let panelSize = NSSize(width: width, height: 34)
         setContentSize(panelSize)

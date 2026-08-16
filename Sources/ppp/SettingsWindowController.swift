@@ -14,17 +14,19 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let promptSettings: PromptSettingsViewController
     private let providerPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
     private let openRouterSignInButton = NSButton(
-        title: "Sign in with OpenRouter",
+        title: L10n.string("Sign in with OpenRouter"),
         target: nil,
         action: nil
     )
-    private let apiKeyLabel = NSTextField(labelWithString: "API key")
+    private let apiKeyLabel = NSTextField(labelWithString: L10n.string("API key"))
     private let apiKeyField = NSSecureTextField()
     private let modelField = NSTextField()
-    private let thinkingLevelLabel = NSTextField(labelWithString: "Thinking level (empty to omit)")
+    private let thinkingLevelLabel = NSTextField(
+        labelWithString: L10n.string("Thinking level (empty to omit)")
+    )
     private let thinkingLevelField = NSTextField()
-    private let revertButton = NSButton(title: "Revert", target: nil, action: nil)
-    private let updateButton = NSButton(title: "Update", target: nil, action: nil)
+    private let revertButton = NSButton(title: L10n.string("Revert"), target: nil, action: nil)
+    private let updateButton = NSButton(title: L10n.string("Update"), target: nil, action: nil)
     private var displayedProvider: AIProvider = .openRouter
     private var savedProvider: AIProvider = .openRouter
     private var drafts: [AIProvider: ProviderDraft] = [:]
@@ -41,7 +43,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             backing: .buffered,
             defer: false
         )
-        window.title = "ppp Settings"
+        window.title = L10n.string("ppp Settings")
         window.isReleasedWhenClosed = false
         window.center()
         super.init(window: window)
@@ -77,17 +79,17 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         tabView.translatesAutoresizingMaskIntoConstraints = false
 
         let generalItem = NSTabViewItem(identifier: "general")
-        generalItem.label = "General"
+        generalItem.label = L10n.string("General")
         generalItem.view = makeGeneralView()
         tabView.addTabViewItem(generalItem)
 
         let promptsItem = NSTabViewItem(identifier: "prompts")
-        promptsItem.label = "Prompts"
+        promptsItem.label = L10n.string("Prompts")
         promptsItem.view = promptSettings.view
         tabView.addTabViewItem(promptsItem)
 
         let systemPromptItem = NSTabViewItem(identifier: "systemPrompt")
-        systemPromptItem.label = "System Prompt"
+        systemPromptItem.label = L10n.string("System Prompt")
         systemPromptItem.view = makeSystemPromptView()
         tabView.addTabViewItem(systemPromptItem)
 
@@ -104,7 +106,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let content = NSView()
 
         let subtitle = NSTextField(
-            wrappingLabelWithString: "Select text in any app, then click the ppp button nearby to review it."
+            wrappingLabelWithString: L10n.string(
+                "Select text in any app, then click the ppp button nearby to review it."
+            )
         )
         subtitle.textColor = .secondaryLabelColor
 
@@ -126,12 +130,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         apiKeyField.delegate = self
         modelField.delegate = self
         thinkingLevelField.delegate = self
-        modelField.placeholderString = "Model ID"
+        modelField.placeholderString = L10n.string("Model ID")
         thinkingLevelField.placeholderString = "none"
 
         revertButton.target = self
         revertButton.action = #selector(revert)
-        revertButton.toolTip = "Discard Unsaved Changes"
+        revertButton.toolTip = L10n.string("Discard Unsaved Changes")
         updateButton.target = self
         updateButton.action = #selector(update)
         updateButton.keyEquivalent = "\r"
@@ -178,7 +182,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let content = NSView()
 
         let subtitle = NSTextField(
-            wrappingLabelWithString: "This read-only prompt is sent with every review request."
+            wrappingLabelWithString: L10n.string(
+                "This read-only prompt is sent with every review request."
+            )
         )
         subtitle.textColor = .secondaryLabelColor
         subtitle.translatesAutoresizingMaskIntoConstraints = false
@@ -217,7 +223,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     }
 
     private func label(_ value: String) -> NSTextField {
-        let field = NSTextField(labelWithString: value)
+        let field = NSTextField(labelWithString: L10n.string(value))
         styleLabel(field)
         return field
     }
@@ -282,7 +288,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             model: provider.defaultModel,
             thinkingLevel: AppSettings.defaultThinkingLevel
         )
-        apiKeyLabel.stringValue = "\(provider.displayName) API key"
+        apiKeyLabel.stringValue = L10n.format("%@ API key", provider.displayName)
         apiKeyField.placeholderString = provider.apiKeyPlaceholder
         apiKeyField.stringValue = draft.apiKey
         modelField.placeholderString = provider.defaultModel
@@ -299,13 +305,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
 
         openRouterSignInButton.isEnabled = openRouterSignInTask == nil
         if openRouterSignInTask != nil {
-            openRouterSignInButton.title = "Connecting…"
+            openRouterSignInButton.title = L10n.string("Connecting…")
         } else if drafts[.openRouter]?.apiKey
             .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
         {
-            openRouterSignInButton.title = "Reconnect"
+            openRouterSignInButton.title = L10n.string("Reconnect")
         } else {
-            openRouterSignInButton.title = "Connect"
+            openRouterSignInButton.title = L10n.string("Connect")
         }
     }
 
@@ -338,7 +344,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
                 return
             } catch {
                 showAlert(
-                    title: "Could not sign in with OpenRouter",
+                    title: L10n.string("Could not sign in with OpenRouter"),
                     message: error.localizedDescription
                 )
             }
@@ -369,7 +375,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
                         .trimmingCharacters(in: .whitespacesAndNewlines)
                 )
                 guard !normalizedDraft.model.isEmpty else {
-                    showAlert(message: "Model ID cannot be empty.")
+                    showAlert(message: L10n.string("Model ID cannot be empty."))
                     return
                 }
                 try KeychainStore.setAPIKey(normalizedDraft.apiKey, for: configuredProvider)
@@ -396,7 +402,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     }
 
     private func showAlert(
-        title: String = "Could not update ppp settings",
+        title: String = L10n.string("Could not update ppp settings"),
         message: String
     ) {
         let alert = NSAlert()

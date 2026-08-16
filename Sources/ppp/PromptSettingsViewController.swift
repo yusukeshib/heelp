@@ -13,8 +13,8 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
     private let nameField = NSTextField()
     private let promptTextView = NSTextView()
     private let deleteButton = NSButton(title: "−", target: nil, action: nil)
-    private let revertButton = NSButton(title: "Revert", target: nil, action: nil)
-    private let updateButton = NSButton(title: "Update", target: nil, action: nil)
+    private let revertButton = NSButton(title: L10n.string("Revert"), target: nil, action: nil)
+    private let updateButton = NSButton(title: L10n.string("Update"), target: nil, action: nil)
     private var savedDrafts: [PromptProfile] = []
     private var drafts: [PromptProfile] = []
     private var displayedID: UUID?
@@ -46,12 +46,14 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
 
     private func buildUI(in content: NSView) {
         let subtitle = NSTextField(
-            wrappingLabelWithString: "Create prompts, drag to reorder them, and select the active one from the ppp menu."
+            wrappingLabelWithString: L10n.string(
+                "Create prompts, drag to reorder them, and select the active one from the ppp menu."
+            )
         )
         subtitle.textColor = .secondaryLabelColor
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("PromptName"))
-        column.title = "Prompts"
+        column.title = L10n.string("Prompts")
         tableView.addTableColumn(column)
         tableView.headerView = nil
         tableView.dataSource = self
@@ -67,10 +69,10 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
         tableScroll.documentView = tableView
 
         let addButton = NSButton(title: "+", target: self, action: #selector(addPrompt))
-        addButton.toolTip = "Add Prompt"
+        addButton.toolTip = L10n.string("Add Prompt")
         deleteButton.target = self
         deleteButton.action = #selector(deletePrompt)
-        deleteButton.toolTip = "Delete Prompt"
+        deleteButton.toolTip = L10n.string("Delete Prompt")
         for button in [addButton, deleteButton] {
             button.bezelStyle = .smallSquare
             button.font = .systemFont(ofSize: 15)
@@ -91,10 +93,11 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
         listControls.widthAnchor.constraint(equalTo: listPane.widthAnchor).isActive = true
         listPane.widthAnchor.constraint(equalToConstant: 205).isActive = true
 
-        nameField.placeholderString = "Prompt name"
+        nameField.placeholderString = L10n.string("Prompt name")
         nameField.delegate = self
 
         promptTextView.delegate = self
+        promptTextView.allowsUndo = true
         promptTextView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         promptTextView.isRichText = false
         promptTextView.isAutomaticQuoteSubstitutionEnabled = false
@@ -112,7 +115,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
 
         revertButton.target = self
         revertButton.action = #selector(revert)
-        revertButton.toolTip = "Discard Unsaved Changes"
+        revertButton.toolTip = L10n.string("Discard Unsaved Changes")
         updateButton.target = self
         updateButton.action = #selector(update)
         updateButton.keyEquivalent = "\r"
@@ -164,7 +167,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
     }
 
     private func label(_ value: String) -> NSTextField {
-        let field = NSTextField(labelWithString: value)
+        let field = NSTextField(labelWithString: L10n.string(value))
         field.font = .systemFont(ofSize: 11, weight: .semibold)
         field.textColor = .secondaryLabelColor
         return field
@@ -297,7 +300,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
 
     @objc private func addPrompt() {
         captureDisplayedDraft()
-        let profile = PromptProfile(name: "New Prompt", prompt: "")
+        let profile = PromptProfile(name: L10n.string("New Prompt"), prompt: "")
         drafts.append(profile)
         updateRevertButton()
         tableView.reloadData()
@@ -335,7 +338,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
             drafts[index].prompt = drafts[index].prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         guard drafts.allSatisfy({ !$0.name.isEmpty && !$0.prompt.isEmpty }) else {
-            showAlert(message: "Prompt names and instructions cannot be empty.")
+            showAlert(message: L10n.string("Prompt names and instructions cannot be empty."))
             return
         }
         settings.promptProfiles = drafts
@@ -358,7 +361,7 @@ final class PromptSettingsViewController: NSViewController, NSTableViewDataSourc
     private func showAlert(message: String) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Could not update prompts"
+        alert.messageText = L10n.string("Could not update prompts")
         alert.informativeText = message
         guard let window = view.window else { return }
         alert.beginSheetModal(for: window)

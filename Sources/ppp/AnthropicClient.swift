@@ -247,7 +247,7 @@ private enum AnthropicStreamDecoder {
         case "error":
             throw ReviewError.stream(
                 provider: provider.displayName,
-                message: event.error?.message ?? "The stream ended unexpectedly."
+                message: event.error?.message ?? L10n.string("The stream ended unexpectedly.")
             )
         default:
             // message_start, content_block_start, content_block_stop,
@@ -272,7 +272,9 @@ private func validate(
             data.append(byte)
         }
         let apiError = try? JSONDecoder().decode(APIErrorEnvelope.self, from: data)
-        let message = apiError?.error.message ?? String(data: data, encoding: .utf8) ?? "Unknown error"
+        let message = apiError?.error.message
+            ?? String(data: data, encoding: .utf8)
+            ?? L10n.string("Unknown error")
         throw ReviewError.api(
             provider: provider.displayName,
             status: http.statusCode,

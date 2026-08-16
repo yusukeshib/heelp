@@ -49,28 +49,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func setupMainMenu() {
         let mainMenu = NSMenu()
-        let editMenuItem = NSMenuItem(title: "Edit", action: nil, keyEquivalent: "")
-        let editMenu = NSMenu(title: "Edit")
+        let editMenuItem = NSMenuItem(title: L10n.string("Edit"), action: nil, keyEquivalent: "")
+        let editMenu = NSMenu(title: L10n.string("Edit"))
 
         editMenu.addItem(
-            NSMenuItem(title: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+            NSMenuItem(title: L10n.string("Undo"), action: Selector(("undo:")), keyEquivalent: "z")
         )
         editMenu.addItem(
-            NSMenuItem(title: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
-        )
-        editMenu.addItem(.separator())
-        editMenu.addItem(
-            NSMenuItem(title: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        )
-        editMenu.addItem(
-            NSMenuItem(title: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        )
-        editMenu.addItem(
-            NSMenuItem(title: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+            NSMenuItem(title: L10n.string("Redo"), action: Selector(("redo:")), keyEquivalent: "Z")
         )
         editMenu.addItem(.separator())
         editMenu.addItem(
-            NSMenuItem(title: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+            NSMenuItem(title: L10n.string("Cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        )
+        editMenu.addItem(
+            NSMenuItem(title: L10n.string("Copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        )
+        editMenu.addItem(
+            NSMenuItem(title: L10n.string("Paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        )
+        editMenu.addItem(.separator())
+        editMenu.addItem(
+            NSMenuItem(title: L10n.string("Select All"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         )
 
         editMenuItem.submenu = editMenu
@@ -92,7 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let menu = NSMenu()
         menu.delegate = self
 
-        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: L10n.string("Settings…"), action: #selector(showSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
         menu.addItem(.separator())
@@ -108,14 +108,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
 
         accessibilityItem = NSMenuItem(
-            title: "Accessibility Access",
+            title: L10n.string("Accessibility Access"),
             action: #selector(openAccessibilitySettings),
             keyEquivalent: ""
         )
         accessibilityItem.target = self
         menu.addItem(accessibilityItem)
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: L10n.string("Quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem.menu = menu
     }
 
@@ -127,11 +127,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             item.state = id == settings.selectedPromptID ? .on : .off
         }
         if AccessibilityTextMonitor.isTrusted {
-            accessibilityItem.title = "Accessibility Access: Granted"
+            accessibilityItem.title = L10n.string("Accessibility Access: Granted")
             accessibilityItem.state = .on
             monitor.refresh()
         } else {
-            accessibilityItem.title = "Grant Accessibility Access…"
+            accessibilityItem.title = L10n.string("Grant Accessibility Access…")
             accessibilityItem.state = .off
         }
     }

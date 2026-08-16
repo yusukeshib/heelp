@@ -24,6 +24,7 @@ bundle: build
 	/usr/libexec/PlistBuddy -c "Set :CFBundleName $(BUNDLE_NAME)" $(APP)/Contents/Info.plist
 	cp $(BIN) $(APP)/Contents/MacOS/
 	cp Assets/ppp.icns $(APP)/Contents/Resources/
+	cp -R Resources/*.lproj $(APP)/Contents/Resources/
 	codesign --force $(CODESIGN_FLAGS) --sign "$(SIGN_IDENTITY)" $(APP)
 
 run: bundle

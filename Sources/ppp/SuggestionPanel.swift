@@ -8,7 +8,7 @@ private final class CopyControl: NSView {
     var onClick: (() -> Void)?
 
     private let icon = NSImageView()
-    private let label = NSTextField(labelWithString: "Copy result")
+    private let label = NSTextField(labelWithString: L10n.string("Copy result"))
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -80,7 +80,7 @@ final class SuggestionPanel: NSPanel {
     private let feedbackLabel = NSTextField(wrappingLabelWithString: "")
     private let suggestionLabel = NSTextField(wrappingLabelWithString: "")
     private let progressIndicator = NSProgressIndicator()
-    private let progressLabel = NSTextField(labelWithString: "Reviewing selection…")
+    private let progressLabel = NSTextField(labelWithString: L10n.string("Reviewing selection…"))
     private let progressRow = NSStackView()
     private let closeButton = NSButton()
     private let copyButton = CopyControl()
@@ -127,7 +127,7 @@ final class SuggestionPanel: NSPanel {
 
         closeButton.image = NSImage(
             systemSymbolName: "xmark.circle.fill",
-            accessibilityDescription: "Close"
+            accessibilityDescription: L10n.string("Close")
         )
         closeButton.imagePosition = .imageOnly
         closeButton.imageScaling = .scaleProportionallyDown
@@ -135,7 +135,7 @@ final class SuggestionPanel: NSPanel {
         closeButton.isBordered = false
         closeButton.target = self
         closeButton.action = #selector(closePanel)
-        closeButton.toolTip = "Close"
+        closeButton.toolTip = L10n.string("Close")
         closeButton.translatesAutoresizingMaskIntoConstraints = false
         closeButton.setContentHuggingPriority(.required, for: .horizontal)
 
@@ -168,7 +168,7 @@ final class SuggestionPanel: NSPanel {
         copyButton.onClick = { [weak self] in
             self?.copySuggestion()
         }
-        copyButton.toolTip = "Copy the result"
+        copyButton.toolTip = L10n.string("Copy the result")
 
         let headerRow = NSStackView(views: [headingLabel, NSView(), closeButton])
         headerRow.orientation = .horizontal
@@ -268,7 +268,7 @@ final class SuggestionPanel: NSPanel {
         currentSuggestion = result.suggestion
         suggestionLabel.stringValue = result.suggestion
         suggestionLabel.isHidden = !result.hasSuggestion
-        copyButton.setTitle("Copy result")
+        copyButton.setTitle(L10n.string("Copy result"))
         copyButton.isHidden = !result.hasSuggestion
         present(near: accessibilityRect, resetScroll: !preservingScroll)
     }
@@ -340,9 +340,9 @@ final class SuggestionPanel: NSPanel {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(currentSuggestion, forType: .string)
-        copyButton.setTitle("Copied")
+        copyButton.setTitle(L10n.string("Copied"))
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-            self?.copyButton.setTitle("Copy result")
+            self?.copyButton.setTitle(L10n.string("Copy result"))
         }
     }
 

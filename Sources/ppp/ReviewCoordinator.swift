@@ -135,7 +135,9 @@ final class ReviewCoordinator {
         guard revision == self.revision else { return }
 
         if settings.diagnosticMode {
-            let source = capture.applicationName.map { "Captured from \($0)" } ?? "Captured text"
+            let source = capture.applicationName.map {
+                L10n.format("Captured from %@", $0)
+            } ?? L10n.string("Captured text")
             panel.show(
                 result: ReviewResult(feedback: text, suggestion: ""),
                 near: capture.caretBounds,
@@ -158,7 +160,10 @@ final class ReviewCoordinator {
         guard !apiKey.isEmpty else {
             panel.show(
                 result: ReviewResult(
-                    feedback: "Open ppp Settings and add a \(provider.displayName) API key.",
+                    feedback: L10n.format(
+                        "Open ppp Settings and add a %@ API key.",
+                        provider.displayName
+                    ),
                     suggestion: ""
                 ),
                 near: capture.caretBounds,
@@ -241,7 +246,7 @@ final class ReviewCoordinator {
                     suggestion: ""
                 ),
                 near: capture.caretBounds,
-                heading: "ppp Error"
+                heading: L10n.string("ppp Error")
             )
         }
     }

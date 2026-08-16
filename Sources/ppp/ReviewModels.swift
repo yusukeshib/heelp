@@ -50,15 +50,15 @@ enum ReviewError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidResponse(let provider):
-            return "\(provider) returned an invalid response."
+            return L10n.format("%@ returned an invalid response.", provider)
         case .api(let provider, let status, let message):
-            return "\(provider) error \(status): \(message)"
+            return L10n.format("%@ error %ld: %@", provider, status, message)
         case .emptyResponse(let provider):
-            return "\(provider) returned no text."
+            return L10n.format("%@ returned no text.", provider)
         case .malformedOutput(let provider, _):
-            return "\(provider) returned an unexpected response format."
+            return L10n.format("%@ returned an unexpected response format.", provider)
         case .stream(let provider, let message):
-            return "\(provider) stream error: \(message)"
+            return L10n.format("%@ stream error: %@", provider, message)
         }
     }
 }
