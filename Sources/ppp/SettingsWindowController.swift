@@ -364,20 +364,26 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     @objc private func update() {
         captureDisplayedDraft()
         let provider = selectedProvider
+        var normalizedDrafts: [AIProvider: ProviderDraft] = [:]
+
+        for configuredProvider in AIProvider.allCases {
+            guard let configuredDraft = drafts[configuredProvider] else { continue }
+            let normalizedDraft = ProviderDraft(
+                apiKey: configuredDraft.apiKey.trimmingCharacters(in: .whitespacesAndNewlines),
+                model: configuredDraft.model.trimmingCharacters(in: .whitespacesAndNewlines),
+                thinkingLevel: configuredDraft.thinkingLevel
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+            guard !normalizedDraft.model.isEmpty else {
+                showAlert(message: L10n.string("Model ID cannot be empty."))
+                return
+            }
+            normalizedDrafts[configuredProvider] = normalizedDraft
+        }
 
         do {
             for configuredProvider in AIProvider.allCases {
-                guard let configuredDraft = drafts[configuredProvider] else { continue }
-                let normalizedDraft = ProviderDraft(
-                    apiKey: configuredDraft.apiKey.trimmingCharacters(in: .whitespacesAndNewlines),
-                    model: configuredDraft.model.trimmingCharacters(in: .whitespacesAndNewlines),
-                    thinkingLevel: configuredDraft.thinkingLevel
-                        .trimmingCharacters(in: .whitespacesAndNewlines)
-                )
-                guard !normalizedDraft.model.isEmpty else {
-                    showAlert(message: L10n.string("Model ID cannot be empty."))
-                    return
-                }
+                guard let normalizedDraft = normalizedDrafts[configuredProvider] else { continue }
                 try KeychainStore.setAPIKey(normalizedDraft.apiKey, for: configuredProvider)
                 settings.setModel(normalizedDraft.model, for: configuredProvider)
                 settings.setThinkingLevel(normalizedDraft.thinkingLevel, for: configuredProvider)

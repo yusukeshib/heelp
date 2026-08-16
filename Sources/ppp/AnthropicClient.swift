@@ -87,7 +87,7 @@ private struct AnthropicClient {
             makeRequest: {
                 let body = AnthropicMessagesRequest(
                     model: model,
-                    maxTokens: 500,
+                    maxTokens: AIProvider.anthropic.maxOutputTokens,
                     system: system,
                     messages: [.init(role: "user", content: user)]
                 )

@@ -172,8 +172,14 @@ final class ReviewCoordinator {
             return
         }
 
-        let requestKey = [provider.rawValue, model, thinkingLevel ?? "", prompt, text]
-            .joined(separator: "\u{1F}")
+        let requestKey = [
+            provider.rawValue,
+            model,
+            thinkingLevel ?? "",
+            prompt,
+            capture.applicationName ?? "",
+            text
+        ].joined(separator: "\u{1F}")
         guard requestKey != lastRequestKey else { return }
         lastRequestKey = requestKey
 

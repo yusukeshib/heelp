@@ -258,8 +258,12 @@ final class AccessibilityTextMonitor {
         guard let text = stringValue(of: element),
               let range = selectedTextRange(of: element),
               range.location >= 0,
-              range.length > 0,
-              range.location + range.length <= (text as NSString).length
+              range.length > 0
+        else { return nil }
+
+        let textLength = (text as NSString).length
+        guard range.location <= textLength,
+              range.length <= textLength - range.location
         else { return nil }
         return (text as NSString).substring(
             with: NSRange(location: range.location, length: range.length)
@@ -368,9 +372,14 @@ final class AccessibilityTextMonitor {
 
     private func characterRangeCaretBounds(of element: AXUIElement) -> CGRect? {
         guard var selectedRange = selectedTextRange(of: element),
+              selectedRange.location >= 0,
               selectedRange.length > 0
         else { return nil }
-        selectedRange.location += selectedRange.length - 1
+        let (caretLocation, overflow) = selectedRange.location.addingReportingOverflow(
+            selectedRange.length - 1
+        )
+        guard !overflow else { return nil }
+        selectedRange.location = caretLocation
         selectedRange.length = 1
         guard let parameter = AXValueCreate(.cfRange, &selectedRange) else { return nil }
         return parameterizedRect(

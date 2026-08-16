@@ -42,10 +42,8 @@ enum AIProvider: String, CaseIterable, Codable, Hashable {
     /// A higher limit is also important for direct transformations such as translation.
     var maxOutputTokens: Int {
         switch self {
-        case .openAI, .openRouter:
+        case .anthropic, .openAI, .openRouter:
             return 2_000
-        case .anthropic:
-            return 500
         }
     }
 
